@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cérebro da Lu</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="chat">
+    <header class="chat-header">
+      <h1>Cérebro da Lu</h1>
+      <button id="catalogo-toggle" class="catalogo-toggle" type="button">Catálogo</button>
+    </header>
+    <div id="catalogo-panel" class="catalogo-panel hidden">
+      <div class="catalogo-filtros">
+        <select id="catalogo-categoria" aria-label="Filtrar por categoria">
+          <option value="">Todas as categorias</option>
+        </select>
+        <input id="catalogo-busca" type="search" placeholder="Buscar produto..." autocomplete="off">
+        <span id="catalogo-contagem" class="catalogo-contagem"></span>
+      </div>
+      <div id="catalogo-lista" class="catalogo-lista"></div>
+    </div>
+    <main id="messages" class="messages"></main>
+    <form id="chat-form" class="chat-form">
+      <input id="chat-input" type="text" placeholder="Digite uma mensagem..." autocomplete="off" autofocus>
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
+  <script src="/static/script.js"></script>
+</body>
+</html>
