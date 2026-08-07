@@ -1,3 +1,4 @@
+import hashlib
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -6,7 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import config, repositories
+from app import config, repositories, vectorstore
+from app.data import conhecimento
 from app.database import init_db
 
 
@@ -16,6 +18,48 @@ def banco_isolado(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "test.db")
     init_db()
     yield
+
+
+def _encoder_falso(textos):
+    """Encoder determinístico de saco de palavras.
+
+    Não é semântico — casa por sobreposição de termos —, mas é o bastante
+    pra exercitar índice, ranking, corte por score e filtro de categoria
+    sem baixar o modelo de verdade.
+    """
+    import numpy as np
+
+    dimensoes = 128
+    vetores = []
+    for texto in textos:
+        vetor = np.zeros(dimensoes)
+        for palavra in texto.lower().split():
+            posicao = int(hashlib.md5(palavra.encode()).hexdigest(), 16) % dimensoes
+            vetor[posicao] += 1
+        norma = np.linalg.norm(vetor)
+        vetores.append(vetor / norma if norma else vetor)
+    return np.array(vetores)
+
+
+@pytest.fixture(autouse=True)
+def rag_sem_download(monkeypatch):
+    """Autouse de propósito: um teste que esquecesse essa fixture baixaria
+    centenas de MB de modelo na primeira execução.
+
+    O corte por score também é zerado aqui. `SCORE_MINIMO_CONHECIMENTO` é
+    calibrado pra similaridade de embeddings reais (que ficam bem acima do
+    que este encoder léxico produz), então mantê-lo faria os testes medirem
+    a calibração do falso, não a lógica. Quem quiser testar o corte
+    redefine o valor explicitamente.
+    """
+    monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 0.0)
+    vectorstore.definir_encoder(_encoder_falso)
+    yield
+    vectorstore.definir_encoder(None)
+
+
+def titulo_de_doc(trecho_do_titulo: str) -> dict:
+    return next(d for d in conhecimento.DOCUMENTOS if trecho_do_titulo in d["titulo"])
 
 
 @pytest.fixture

@@ -65,3 +65,14 @@ def test_executar_json_aceita_argumentos_vazios():
 def test_comparar_produtos_pela_tool():
     resultado = tools.executar("comparar_produtos", {"categoria": "audio"})
     assert resultado["melhor_avaliacao"] == "Fone de Ouvido Studio Monitor"
+
+
+def test_buscar_conhecimento_pela_tool():
+    resultado = tools.executar("buscar_conhecimento", {"pergunta": "quantos BTUs preciso"})
+    assert resultado["encontrou"] is True
+    assert resultado["trechos"]
+
+
+def test_buscar_conhecimento_exige_pergunta():
+    resultado = tools.executar("buscar_conhecimento", {})
+    assert "erro" in resultado

@@ -4,3 +4,7 @@ groq
 python-dotenv
 pytest
 httpx
+sentence-transformers
+# O torch disponível pra Python 3.9 (2.2.x) foi compilado contra NumPy 1.x;
+# com NumPy 2 o encode() quebra em "Numpy is not available".
+numpy<2

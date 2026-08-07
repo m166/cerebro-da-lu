@@ -42,6 +42,34 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "buscar_conhecimento",
+            "description": (
+                "Consulta a base de conhecimento sobre tecnologia e categorias de produto: "
+                "o que cada especificação significa e o que olhar na hora de escolher "
+                "(quanta RAM, quantos BTUs, litragem de geladeira, tipo de switch de teclado etc.). "
+                "Use SEMPRE que o cliente perguntar 'qual é melhor pra mim', 'o que significa X' "
+                "ou descrever uma necessidade em vez de um produto — é o que permite explicar o "
+                "porquê da recomendação em vez de só comparar números do catálogo."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pergunta": {
+                        "type": "string",
+                        "description": "A dúvida ou necessidade do cliente, em linguagem natural.",
+                    },
+                    "categoria": {
+                        "type": "string",
+                        "description": "Restringe a busca a uma categoria do catálogo (opcional).",
+                    },
+                },
+                "required": ["pergunta"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "consultar_estoque",
             "description": "Consulta se um produto tem estoque disponível.",
             "parameters": {
@@ -180,6 +208,7 @@ def _buscar_produtos(query: str = "", categoria: str = "", limite: int = config.
 
 DISPATCH = {
     "buscar_produtos": _buscar_produtos,
+    "buscar_conhecimento": services.buscar_conhecimento,
     "listar_categorias": lambda: {"categorias": services.listar_categorias()},
     "consultar_estoque": services.consultar_estoque,
     "sugerir_produto": services.sugerir_produto,

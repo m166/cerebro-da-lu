@@ -14,6 +14,15 @@ def listar_categorias():
     return services.listar_categorias()
 
 
+@router.get("/conhecimento")
+def buscar_conhecimento(
+    pergunta: str,
+    categoria: str = "",
+    limite: Optional[int] = Query(default=None, ge=1),
+):
+    return services.buscar_conhecimento(pergunta, categoria=categoria, limite=limite)
+
+
 @router.get("/produtos", response_model=List[schemas.ProdutoOut])
 def listar_produtos(
     query: str = "",

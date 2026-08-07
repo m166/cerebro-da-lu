@@ -8,7 +8,7 @@ chama decide como apresentar (HTTP ou mensagem pro modelo).
 from datetime import date, timedelta
 from typing import Callable, List, Optional
 
-from app import exceptions, models, repositories
+from app import config, exceptions, models, repositories
 
 
 # --- Catálogo -------------------------------------------------------------
@@ -35,6 +35,34 @@ def consultar_estoque(produto_id: int) -> dict:
         "nome": produto["nome"],
         "estoque": produto["estoque"],
         "disponivel": produto["estoque"] > 0,
+    }
+
+
+# --- Base de conhecimento (RAG) -------------------------------------------
+
+def buscar_conhecimento(pergunta: str, categoria: str = "", limite: Optional[int] = None) -> dict:
+    """Busca semântica na base de conhecimento sobre tecnologia.
+
+    Descarta resultado com similaridade baixa: é melhor a Lu admitir que
+    não sabe do que fundamentar a recomendação num trecho irrelevante.
+    """
+    encontrados = repositories.buscar_conhecimento(
+        pergunta, k=limite or config.LIMITE_CONHECIMENTO, categoria=categoria
+    )
+    relevantes = [d for d in encontrados if d["score"] >= config.SCORE_MINIMO_CONHECIMENTO]
+
+    return {
+        "pergunta": pergunta,
+        "encontrou": bool(relevantes),
+        "trechos": [
+            {
+                "titulo": d["titulo"],
+                "categoria": d["categoria"],
+                "texto": d["texto"],
+                "score": round(d["score"], 3),
+            }
+            for d in relevantes
+        ],
     }
 
 

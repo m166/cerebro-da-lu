@@ -76,6 +76,25 @@ def test_comparacao_com_um_produto_so():
     assert resposta.status_code == 422
 
 
+# --- Conhecimento (RAG) ----------------------------------------------------
+
+def test_buscar_conhecimento():
+    resposta = client.get("/api/conhecimento", params={"pergunta": "quantos BTUs preciso"})
+    assert resposta.status_code == 200
+    assert resposta.json()["encontrou"] is True
+
+
+def test_buscar_conhecimento_filtrando_categoria():
+    resposta = client.get(
+        "/api/conhecimento", params={"pergunta": "como escolher", "categoria": "colchoes"}
+    )
+    assert all(t["categoria"] == "colchoes" for t in resposta.json()["trechos"])
+
+
+def test_buscar_conhecimento_sem_pergunta():
+    assert client.get("/api/conhecimento").status_code == 422
+
+
 # --- Pedidos -------------------------------------------------------------
 
 def test_fluxo_completo_do_pedido():

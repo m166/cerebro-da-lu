@@ -21,13 +21,15 @@ app/
   models.py         DDL das tabelas + constantes de domínio (status, etapas)
   schemas.py        Pydantic: contratos de entrada e saída da API
   database.py       conexão SQLite + init_db
-  repositories.py   acesso a dados (mensagens, pedidos, catálogo)
+  repositories.py   acesso a dados (mensagens, pedidos, catálogo, RAG)
   services.py       regras de negócio (validação, cálculo, sugestão)
   exceptions.py     erros de domínio
+  vectorstore.py    índice vetorial do RAG (lazy, análogo a database.py)
   routers/
     views.py        serve o HTML do chat
     chat.py         /api/chat, /api/history
-    produtos.py     /api/produtos, /api/categorias, sugestão, comparação
+    produtos.py     /api/produtos, /api/categorias, sugestão, comparação,
+                    /api/conhecimento
     pedidos.py      /api/pedidos + rastreio, agendamento, 2ª via
   ai/
     client.py       client da Groq (lazy, pra não exigir key nos testes)
@@ -35,6 +37,7 @@ app/
     chat.py         loop de tool calling e histórico
   data/
     catalogo.py     113 produtos mockados em 27 categorias
+    conhecimento.py 40 documentos que formam o corpus do RAG
 static/             frontend vanilla (HTML/CSS/JS), sem framework
 tests/              suíte pytest espelhando as camadas
 ```
@@ -42,7 +45,7 @@ tests/              suíte pytest espelhando as camadas
 ### Direção das dependências
 
 ```
-routers → services → repositories → database / data
+routers → services → repositories → database / vectorstore / data
 routers → ai.chat → ai.tools → services
 ```
 
@@ -59,6 +62,9 @@ services, então quem orquestra o modelo fica acima de ambos).
 - **Python 3.9** no venv: não use `X | None` em anotações avaliadas em
   runtime. Em `schemas.py` (Pydantic) use `Optional[...]`; em módulos
   comuns, `Optional[...]` ou `from __future__ import annotations`.
+- **Não atualize o NumPy pra 2.x.** O torch disponível pra Python 3.9
+  (2.2.x) foi compilado contra NumPy 1.x e o `encode()` do RAG quebra com
+  "Numpy is not available". O pin está no `requirements.txt`.
 - Erros de negócio são exceções de `app/exceptions.py`. Os routers
   traduzem pra `HTTPException` (o corpo sai como `{"detail": ...}`, que é
   o que o frontend lê); `ai/tools.py` traduz pra `{"erro": ...}`, formato
@@ -92,6 +98,27 @@ Atenção: o entrypoint é `app.main:app` (não `main:app`).
   temporário, nunca o `cerebro.db` do usuário.
 - Não acople testes a IDs fixos de produto — use `id_por_nome("...")`,
   senão inserir um produto no meio do catálogo quebra a suíte.
+- **Nenhum teste baixa o modelo de embedding.** A fixture `rag_sem_download`
+  é `autouse` e troca o encoder por um saco de palavras determinístico.
+  Como ele é léxico e não semântico, **não escreva teste afirmando que a
+  pergunta X traz o documento Y** — isso mede o encoder falso, não o
+  sistema. Qualidade semântica se verifica manualmente, com o modelo real.
+
+## Sobre o RAG
+
+- `vectorstore.py` é infraestrutura (o análogo de `database.py`): carrega
+  modelo e índice de forma lazy, em duas etapas, porque o modelo tem
+  centenas de MB.
+- O modelo é da família **E5**, que exige os prefixos `query:` e
+  `passage:` — sem eles a qualidade cai bastante. Os prefixos estão em
+  `config.py` e são aplicados no `vectorstore.py`.
+- `SCORE_MINIMO_CONHECIMENTO` é um piso fraco, calibrado empiricamente.
+  Com o E5 as distribuições de pergunta no domínio e fora dele se
+  sobrepõem, então **ele não é filtro de assunto confiável** — quem segura
+  resposta inventada é a persona. Se trocar de modelo, recalibre.
+- Documento novo em `conhecimento.py` com `categoria` preenchida precisa
+  usar uma categoria que exista no `catalogo.py`, senão o filtro nunca o
+  encontra (há teste garantindo isso).
 
 ## Agentes especialistas
 

@@ -7,7 +7,7 @@ escrita.
 
 from typing import List, Optional
 
-from app import models
+from app import models, vectorstore
 from app.data import catalogo
 from app.database import get_connection
 
@@ -92,3 +92,9 @@ def obter_produto(produto_id: int) -> Optional[dict]:
 
 def listar_categorias() -> List[str]:
     return catalogo.CATEGORIAS
+
+
+# --- Base de conhecimento (RAG) -------------------------------------------
+
+def buscar_conhecimento(pergunta: str, k: int, categoria: str = "") -> List[dict]:
+    return vectorstore.buscar(pergunta, k=k, categoria=categoria)

@@ -58,10 +58,10 @@ real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
   de entrega e avaliação — não só o mais barato.
 - **Comparar produtos** lado a lado, apontando quem ganha em cada critério.
 - **Agendar entrega** pra uma data escolhida pelo cliente.
-- **Base de conhecimento (RAG)** sobre tecnologias/produtos, pra
-  fundamentar as sugestões (ex: diferença entre notebooks, o que olhar
-  num celular etc.) em vez de alucinar especificações — **ainda não feito**,
-  é a fase 4.
+- **Base de conhecimento (RAG)** com busca semântica sobre tecnologia: o
+  que cada especificação significa e o que olhar na hora de escolher. É o
+  que permite responder "meu quarto tem 12m² e bate sol" com "9000 BTUs,
+  e por isso este modelo" em vez de só listar preço.
 - **2ª via de boleto ou nota fiscal** (mockado).
 - **Rastreio de pedido** — onde está, etapa atual.
 - **Catálogo navegável** — painel com filtro por categoria e busca, onde o
@@ -78,12 +78,14 @@ app/
   models.py         DDL das tabelas + constantes de domínio
   schemas.py        Pydantic: contratos de entrada e saída
   database.py       conexão SQLite + init_db
-  repositories.py   acesso a dados (mensagens, pedidos, catálogo)
+  repositories.py   acesso a dados (mensagens, pedidos, catálogo, RAG)
   services.py       regras de negócio
   exceptions.py     erros de domínio
+  vectorstore.py    índice vetorial do RAG (embeddings + similaridade)
   routers/          views.py, chat.py, produtos.py, pedidos.py
   ai/               client.py (Groq), tools.py (function calling), chat.py (loop)
-  data/catalogo.py  os 113 produtos mockados
+  data/catalogo.py     os 113 produtos mockados
+  data/conhecimento.py base de conhecimento do RAG (40 documentos)
 persona.md          system prompt da Lu
 static/             frontend vanilla (HTML/CSS/JS): chat + catálogo
 tests/              suíte pytest espelhando as camadas
@@ -103,6 +105,7 @@ agora é validar o fluxo de produto.
 | POST | `/api/chat` | conversa com a Lu (com tool calling) |
 | GET | `/api/history` | histórico persistido da conversa |
 | GET | `/api/categorias` | lista as categorias do catálogo |
+| GET | `/api/conhecimento` | busca semântica na base (`pergunta`, `categoria`) |
 | GET | `/api/produtos` | lista/busca produtos (`query`, `categoria`, `limite`) |
 | GET | `/api/produtos/{id}` | detalhe de um produto |
 | GET | `/api/produtos/{id}/estoque` | estoque de um produto |
@@ -129,9 +132,12 @@ agora é validar o fluxo de produto.
    - ~~Tool calling ligando o chat às funções acima~~
    - ~~Catálogo navegável na UI, com filtro por categoria e busca~~
    - ~~Estrutura em camadas (routers/services/repositories/schemas/models)~~
-4. RAG de verdade — base vetorial de conhecimento sobre produtos/tecnologias
-   pra fundamentar as sugestões (hoje a sugestão usa só os campos do
-   catálogo mockado, sem busca semântica).
+4. ~~**RAG** — base vetorial de conhecimento sobre produtos/tecnologias pra
+   fundamentar as sugestões~~
+   - ~~40 documentos cobrindo as categorias do catálogo + temas gerais
+     (voltagem, eficiência energética, garantia)~~
+   - ~~Busca semântica com embeddings locais (`intfloat/multilingual-e5-small`)~~
+   - ~~Tool `buscar_conhecimento` e endpoint `/api/conhecimento`~~
 5. Dados reais — trocar mocks por integrações verdadeiras (catálogo,
    estoque, logística, financeiro) quando/se o projeto avançar pra isso.
 6. Avaliação e iteração — medir qualidade das respostas e das decisões de
@@ -142,23 +148,37 @@ agora é validar o fluxo de produto.
 
 - Chat via navegador com tool calling (Groq, `openai/gpt-oss-120b` por
   padrão, configurável via `GROQ_MODEL` no `.env`).
-- 10 ferramentas disponíveis ao modelo: busca, categorias, estoque,
-  sugestão, comparação, criação/consulta/rastreio de pedido, agendamento
-  e 2ª via.
+- 11 ferramentas disponíveis ao modelo: busca de produto, base de
+  conhecimento, categorias, estoque, sugestão, comparação,
+  criação/consulta/rastreio de pedido, agendamento e 2ª via.
 - Histórico persistido em SQLite — sobrevive a refresh e restart.
 - Catálogo, pedidos, estoque, rastreio, agendamento e 2ª via são **dados
   mockados**, pensados pra simular as integrações reais que um produto
   como esse teria no Magalu.
 - A busca exposta ao modelo devolve no máximo 10 produtos por vez (com o
   total encontrado), pra não estourar o contexto com 113 itens.
-- Ainda não há RAG vetorial de verdade (fase 4) nem autenticação/multi-
-  usuário — é single-user, uso local.
+- Ainda não há autenticação nem multi-usuário — é single-user, uso local.
+
+### Limitação conhecida do RAG
+
+O corte por score (`SCORE_MINIMO_CONHECIMENTO`) derruba o ruído pior, mas
+**não é um filtro confiável de assunto**. O E5 comprime as similaridades
+numa faixa alta e as distribuições se sobrepõem: medindo 16 perguntas do
+domínio contra 8 fora dele, as do domínio ficaram entre 0.842 e 0.92 e as
+de fora chegaram a 0.863. Quem de fato segura resposta inventada é a
+persona, que manda a Lu admitir quando a base não cobre o assunto.
 
 ## Notas de desenvolvimento
 
-- O venv do projeto roda **Python 3.9**, então anotações com `X | None` não
-  funcionam em runtime — use `Optional[...]`.
-- Os testes nunca chamam a API da Groq (é mockada) e sempre usam um SQLite
-  temporário, não o `cerebro.db` real.
+- O venv roda **Python 3.9**, então anotações com `X | None` não funcionam
+  em runtime — use `Optional[...]`.
+- **`numpy<2` é obrigatório**: o torch disponível pra Python 3.9 (2.2.x) foi
+  compilado contra NumPy 1.x e quebra com NumPy 2 ("Numpy is not
+  available").
+- Na primeira execução o modelo de embedding baixa (~470MB) e fica em
+  cache. A carga é lazy: só acontece na primeira busca de conhecimento.
+- Os testes nunca chamam a Groq (mockada) nem baixam o modelo de embedding
+  (encoder falso na fixture `rag_sem_download`), e sempre usam um SQLite
+  temporário.
 - Convenções e direção das dependências entre camadas estão no
   `CLAUDE.md`.
