@@ -50,6 +50,20 @@ RETRIEVAL = [
     ("mudei de cidade e a tomada e diferente, e perigoso?", 38),
     ("qual selo indica que o aparelho gasta menos luz?", 39),
     ("comprei pela internet e me arrependi, posso devolver?", 40),
+    # Escritos depois do enriquecimento dos documentos, pra checar se a
+    # melhora foi generalização e não memorização das perguntas indexadas.
+    ("meu apartamento e 220 e comprei um aparelho 110, o que faco?", 38),
+    ("quero um teclado que nao acorde minha esposa de madrugada", 23),
+    ("a fritadeira de 3 litros da pra 4 pessoas?", 16),
+    ("jogos modernos rodam com video integrado?", 3),
+    ("quantos btu pra um escritorio de 25 metros?", 17),
+    ("queria abafar o som do aviao numa viagem longa", 11),
+    ("gasto muito com capsula de cafe, tem alternativa?", 33),
+    ("minha impressora fica meses sem uso e entope", 25),
+    ("que bike comprar pra crianca de 6 anos?", 28),
+    ("tenho pouco espaco na cozinha, que micro-ondas?", 19),
+    ("quero assistir netflix num quarto pequeno, que polegada?", 8),
+    ("preciso medir batimento cardiaco durante a corrida", 30),
 ]
 
 # Perguntas fora do domínio: a base não cobre, então o esperado é não

@@ -60,16 +60,20 @@ modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
 
 | Métrica | Resultado |
 | --- | --- |
-| acerto@1 (documento certo em 1º) | 30/40 (75%) |
-| acerto@3 | 35/40 (87,5%) |
-| MRR | 0,808 |
+| acerto@1 (documento certo em 1º) | 49/52 (94,2%) |
+| acerto@3 | 52/52 (100%) |
+| MRR | 0,968 |
 | rejeição de pergunta fora de escopo | 7/8 |
-| ferramenta correta | 17/18 (94,4%) |
-| respondeu sem consultar ferramenta | 0/18 |
+| ferramenta correta | 16/18 (88,9%) |
+| respondeu sem consultar ferramenta | 1/18 |
 | conversa sem disparar ferramenta | 3/3 |
 
 A avaliação de ferramenta varia entre execuções — o modelo não é
-determinístico, e alguns casos têm mais de uma escolha defensável.
+determinístico, e alguns casos têm mais de uma escolha defensável. O
+retrieval é estável.
+
+Os mínimos ficam logo abaixo do medido, pra que uma regressão trave a
+execução em vez de passar despercebida.
 
 ## Visão de produto
 
@@ -178,8 +182,10 @@ agora é validar o fluxo de produto.
    - ~~Suíte `evals/` com 40 casos de retrieval, 8 fora de escopo e 21 de
      escolha de ferramenta~~
    - ~~Métricas com mínimo que trava build (acerto@1, acerto@3, MRR)~~
-   - ~~Primeira iteração: escolha de ferramenta de 77,8% para 94,4%~~
-   - Pendente: melhorar acerto@1 do retrieval (hoje 75%)
+   - ~~Iteração 1: escolha de ferramenta de 77,8% para 94,4% (descrições
+     de tool que empurravam pra `listar_categorias` à toa)~~
+   - ~~Iteração 2: acerto@1 do retrieval de 75% para 94,2%, enriquecendo
+     os documentos com as perguntas que respondem~~
 7. Rename final da pasta/projeto pra "Cérebro da Lu".
 
 ## Estado atual
@@ -197,14 +203,23 @@ agora é validar o fluxo de produto.
   total encontrado), pra não estourar o contexto com 113 itens.
 - Ainda não há autenticação nem multi-usuário — é single-user, uso local.
 
-### Falhas de retrieval conhecidas
+### Por que cada documento tem uma lista de perguntas
 
-A avaliação expõe 5 perguntas que não trazem o documento certo em 1º — o
-padrão é o cliente descrever um sintoma sem citar o produto ("a tomada é
-diferente" não chega no documento de voltagem; "ela reclama do barulho
-quando digito" cai em fones em vez de teclado). O caminho provável é
-enriquecer cada documento com as perguntas que ele responde, ou somar
-busca léxica à vetorial. Está medido e pendente, não resolvido.
+O corpo dos documentos é escrito em vocabulário de especificação ("air
+fryer", "voltagem", "switch azul"), mas o cliente descreve sintoma e usa
+sinônimo ("fritadeira", "tomada diferente", "barulho quando digito"). Sem
+uma ponte entre os dois, a busca erra justamente nas perguntas mais
+naturais — o acerto@1 era de 75%.
+
+Cada documento passou a declarar as perguntas que responde, e elas entram
+no texto indexado junto do corpo. O acerto@1 subiu pra 94,2% e o acerto@3
+pra 100%.
+
+Pra garantir que isso é generalização e não memorização, as perguntas
+indexadas não podem ser cópia dos casos de avaliação — há teste em
+`tests/test_rag.py` que falha se alguma passar de 50% de sobreposição de
+termos de conteúdo. Doze casos do conjunto foram escritos depois do
+enriquecimento, justamente pra medir pergunta inédita.
 
 ### Limitação conhecida do RAG
 

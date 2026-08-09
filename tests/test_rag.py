@@ -26,6 +26,20 @@ def test_documentos_tem_titulo_e_texto():
         assert len(documento["texto"]) > 100
 
 
+def test_todo_documento_tem_perguntas():
+    """As perguntas fazem a ponte entre o vocabulário de especificação do
+    corpo e o de sintoma que o cliente usa — sem elas o acerto@1 cai."""
+    for documento in conhecimento.DOCUMENTOS:
+        assert len(documento["perguntas"]) >= 3, documento["titulo"]
+
+
+def test_texto_indexavel_inclui_as_perguntas():
+    documento = conhecimento.DOCUMENTOS[0]
+    indexavel = conhecimento.texto_indexavel(documento)
+    for pergunta in documento["perguntas"]:
+        assert pergunta in indexavel
+
+
 def test_categorias_do_conhecimento_existem_no_catalogo():
     """Categoria vazia é permitida (assunto geral), mas se tiver categoria
     ela precisa casar com o catálogo, senão o filtro nunca acha nada."""
@@ -41,6 +55,43 @@ def test_texto_indexavel_junta_titulo_e_corpo():
     indexavel = conhecimento.texto_indexavel(documento)
     assert documento["titulo"] in indexavel
     assert documento["texto"] in indexavel
+
+
+def test_perguntas_do_doc_nao_copiam_os_casos_do_eval():
+    """Se a pergunta indexada for a mesma do caso de avaliação, a métrica
+    mede memorização em vez de generalização.
+
+    A comparação ignora palavras estruturais: "qual a diferença de OLED pra
+    QLED" e "qual a diferença de SSD pra HD" compartilham a forma da frase,
+    não o assunto — isso não é contaminação.
+    """
+    import re
+    import unicodedata
+
+    from evals import casos
+
+    def termos(texto: str) -> set:
+        texto = unicodedata.normalize("NFKD", texto.lower())
+        texto = "".join(c for c in texto if not unicodedata.combining(c))
+        return set(re.findall(r"[a-z0-9]+", texto))
+
+    estruturais = termos(
+        "o a os as de do da em pra para por que qual quais e eh um uma no na com "
+        "meu minha eu quero preciso tem ter vale pena mais menos muito ou se"
+    )
+
+    indexadas = [
+        termos(p) - estruturais for d in conhecimento.DOCUMENTOS for p in d["perguntas"]
+    ]
+    for pergunta, _ in casos.RETRIEVAL:
+        do_caso = termos(pergunta) - estruturais
+        for da_base in indexadas:
+            if not do_caso or not da_base:
+                continue
+            sobreposicao = len(do_caso & da_base) / len(do_caso | da_base)
+            assert sobreposicao < 0.5, (
+                f"caso de avaliação quase idêntico a pergunta indexada: {pergunta!r}"
+            )
 
 
 # --- Vectorstore -------------------------------------------------------------

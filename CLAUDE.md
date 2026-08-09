@@ -151,6 +151,14 @@ Regras da avaliação:
 - Documento novo em `conhecimento.py` com `categoria` preenchida precisa
   usar uma categoria que exista no `catalogo.py`, senão o filtro nunca o
   encontra (há teste garantindo isso).
+- **Todo documento declara `perguntas`** (mínimo 3), que entram no texto
+  indexado. É o que liga o vocabulário de especificação do corpo ao de
+  sintoma do cliente — foi o que levou o acerto@1 de 75% pra 94,2%. Ao
+  criar documento, escreva as perguntas incluindo sinônimos populares
+  ("fritadeira" pra air fryer, "tomada" pra voltagem).
+- **Não copie caso do `evals/` pra dentro das `perguntas`.** Isso vira
+  memorização e a métrica deixa de significar algo; há teste que falha se
+  a sobreposição de termos de conteúdo passar de 50%.
 
 ## Agentes especialistas
 

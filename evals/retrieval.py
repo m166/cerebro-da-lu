@@ -41,11 +41,14 @@ def avaliar_acerto() -> Resultado:
             trouxe = obtidos[0]["titulo"] if obtidos else "(nada)"
             erros.append(linha_erro(pergunta, esperado=f"doc {doc_id}", obtido=trouxe))
 
+    # Mínimos logo abaixo do medido depois do enriquecimento dos documentos
+    # (94% / 100% / 0.97). Frouxo demais não trava regressão: com 60% aqui,
+    # perder um quarto do acerto passaria batido.
     total = len(casos.RETRIEVAL)
     return [
-        Metrica("acerto@1", acertos_top1, total, minimo=0.60),
-        Metrica(f"acerto@{K}", acertos_topk, total, minimo=0.80),
-        Metrica("MRR", reciprocos, total, minimo=0.65, e_media=True),
+        Metrica("acerto@1", acertos_top1, total, minimo=0.88),
+        Metrica(f"acerto@{K}", acertos_topk, total, minimo=0.96),
+        Metrica("MRR", reciprocos, total, minimo=0.92, e_media=True),
     ], erros
 
 
