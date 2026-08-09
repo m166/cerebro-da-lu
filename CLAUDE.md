@@ -40,6 +40,7 @@ app/
     conhecimento.py 40 documentos que formam o corpus do RAG
 static/             frontend vanilla (HTML/CSS/JS), sem framework
 tests/              suíte pytest espelhando as camadas
+evals/              avaliação de qualidade (modelo real + Groq)
 ```
 
 ### Direção das dependências
@@ -103,6 +104,37 @@ Atenção: o entrypoint é `app.main:app` (não `main:app`).
   Como ele é léxico e não semântico, **não escreva teste afirmando que a
   pergunta X traz o documento Y** — isso mede o encoder falso, não o
   sistema. Qualidade semântica se verifica manualmente, com o modelo real.
+
+## Testes x avaliação
+
+São coisas diferentes e não devem se misturar:
+
+- **`tests/`** verifica que o código funciona. Roda em segundos, é
+  determinístico, não chama a Groq nem baixa modelo. Toda mudança de
+  código passa por aqui.
+- **`evals/`** mede se a Lu **acerta** — retrieval e escolha de
+  ferramenta. Usa o modelo real e a Groq, demora e custa token. Rode
+  depois de mexer em prompt, persona, descrição de tool ou base de
+  conhecimento:
+
+```bash
+python -m evals retrieval     # sem custo de API
+python -m evals ferramentas   # ~21 chamadas à Groq
+```
+
+Regras da avaliação:
+
+- A avaliação de ferramenta **não executa** as tools nem grava histórico:
+  só pede a decisão do modelo. Se mudar isso, ela passa a criar pedidos.
+- O resultado de `ferramentas` varia entre execuções (o modelo não é
+  determinístico). Não trate uma queda de um caso como regressão sem
+  rodar de novo.
+- Ao adicionar caso, escreva a pergunta **como um cliente falaria**, com
+  gíria e sem acento. Usar as palavras do título do documento infla a
+  métrica e não mede nada.
+- Se um caso falhar, considere que a expectativa pode estar errada antes
+  de mexer no sistema — já aconteceu de o caso pedir tool onde a persona
+  manda perguntar primeiro.
 
 ## Sobre o RAG
 

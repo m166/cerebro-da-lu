@@ -11,22 +11,38 @@ from typing import Any, Dict, List
 
 from app import config, exceptions, models, services
 
+
+def _opcional(tipo: str, descricao: str, **extra) -> Dict[str, Any]:
+    """Parâmetro opcional que também aceita null.
+
+    O modelo costuma preencher opcional que não vai usar com `null`, e a
+    Groq valida o argumento contra o schema antes de entregar: sem aceitar
+    null aqui, a chamada volta como erro 400 e o chat quebra.
+    """
+    return {"type": [tipo, "null"], "description": descricao, **extra}
+
+
 TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
             "name": "buscar_produtos",
             "description": (
-                "Busca produtos no catálogo por texto livre e/ou categoria. "
-                "O catálogo tem mais de 100 produtos, então a busca devolve "
-                "só os primeiros resultados junto com o total encontrado."
+                "Busca produtos no catálogo por texto livre e/ou categoria. É a "
+                "ferramenta padrão quando o cliente cita um tipo de produto "
+                "('tem notebook?', 'quero um fone'): chame direto, sem listar "
+                "categorias antes. O catálogo tem mais de 100 produtos, então a "
+                "busca devolve só os primeiros resultados junto com o total."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Termo de busca livre, ex: 'notebook gamer'."},
-                    "categoria": {"type": "string", "description": "Categoria exata (use listar_categorias pra ver as opções)."},
-                    "limite": {"type": "integer", "description": "Quantos produtos devolver. Padrão 10, máximo 30."},
+                    "query": _opcional("string", "Termo de busca livre, ex: 'notebook gamer'."),
+                    "categoria": _opcional(
+                        "string",
+                        "Categoria exata. Opções: " + ", ".join(services.listar_categorias()),
+                    ),
+                    "limite": _opcional("integer", "Quantos produtos devolver. Padrão 10, máximo 30."),
                 },
             },
         },
@@ -35,7 +51,12 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "listar_categorias",
-            "description": "Lista todas as categorias disponíveis no catálogo.",
+            "description": (
+                "Lista as categorias do catálogo. Use APENAS quando o cliente "
+                "perguntar de forma aberta o que a loja vende. Se ele já citou um "
+                "tipo de produto, vá direto pra buscar_produtos, sugerir_produto "
+                "ou comparar_produtos."
+            ),
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -58,10 +79,9 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                         "type": "string",
                         "description": "A dúvida ou necessidade do cliente, em linguagem natural.",
                     },
-                    "categoria": {
-                        "type": "string",
-                        "description": "Restringe a busca a uma categoria do catálogo (opcional).",
-                    },
+                    "categoria": _opcional(
+                        "string", "Restringe a busca a uma categoria do catálogo (opcional)."
+                    ),
                 },
                 "required": ["pergunta"],
             },
@@ -86,17 +106,19 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             "description": (
                 "Sugere o melhor produto pra necessidade do cliente, combinando "
                 "preço, prazo de entrega e avaliação (ou um critério específico). "
-                "Informe a categoria pra sugestão fazer sentido."
+                "Use quando o cliente pedir 'o melhor', 'o mais barato' ou 'o que "
+                "você indica' de um tipo de produto — chame direto com a categoria, "
+                "sem listar categorias antes."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "categoria": {"type": "string", "description": "Categoria pra restringir a busca."},
-                    "criterio": {
-                        "type": "string",
-                        "enum": list(models.CRITERIOS_SUGESTAO),
-                        "description": "Critério de escolha. Padrão: melhor_custo_beneficio.",
-                    },
+                    "categoria": _opcional("string", "Categoria pra restringir a busca."),
+                    "criterio": _opcional(
+                        "string",
+                        "Critério de escolha. Padrão: melhor_custo_beneficio.",
+                        enum=list(models.CRITERIOS_SUGESTAO) + [None],
+                    ),
                 },
             },
         },
@@ -107,18 +129,19 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             "name": "comparar_produtos",
             "description": (
                 "Compara produtos lado a lado e diz quem ganha em preço, prazo, "
-                "avaliação e custo-benefício. Use quando o cliente estiver "
-                "decidindo entre opções de uma mesma categoria."
+                "avaliação e custo-benefício. Use quando o cliente pedir pra "
+                "comparar ou estiver decidindo entre opções de uma mesma "
+                "categoria — chame direto com a categoria, sem listar antes."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "categoria": {"type": "string", "description": "Compara todos os produtos da categoria."},
-                    "produto_ids": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "description": "IDs específicos pra comparar (alternativa à categoria).",
-                    },
+                    "categoria": _opcional("string", "Compara todos os produtos da categoria."),
+                    "produto_ids": _opcional(
+                        "array",
+                        "IDs específicos pra comparar (alternativa à categoria).",
+                        items={"type": "integer"},
+                    ),
                 },
             },
         },
@@ -132,8 +155,10 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 "type": "object",
                 "properties": {
                     "produto_id": {"type": "integer", "description": "ID do produto."},
-                    "quantidade": {"type": "integer", "description": "Quantidade desejada. Padrão: 1."},
-                    "endereco_entrega": {"type": "string", "description": "Endereço de entrega informado pelo cliente."},
+                    "quantidade": _opcional("integer", "Quantidade desejada. Padrão: 1."),
+                    "endereco_entrega": _opcional(
+                        "string", "Endereço de entrega informado pelo cliente."
+                    ),
                 },
                 "required": ["produto_id"],
             },
@@ -187,7 +212,9 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 "type": "object",
                 "properties": {
                     "pedido_id": {"type": "integer", "description": "ID do pedido."},
-                    "tipo": {"type": "string", "enum": ["boleto", "nf"], "description": "Tipo de documento."},
+                    "tipo": _opcional(
+                        "string", "Tipo de documento.", enum=["boleto", "nf", None]
+                    ),
                 },
                 "required": ["pedido_id"],
             },
@@ -226,6 +253,11 @@ def executar(nome: str, args: dict) -> dict:
     func = DISPATCH.get(nome)
     if func is None:
         return {"erro": f"Ferramenta desconhecida: {nome}"}
+
+    # O modelo preenche opcional que não vai usar com null; descartar aqui
+    # faz o service cair no default dele em vez de receber None.
+    args = {chave: valor for chave, valor in args.items() if valor is not None}
+
     try:
         return func(**args)
     except exceptions.ErroDeDominio as exc:

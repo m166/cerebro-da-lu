@@ -38,6 +38,39 @@ http://localhost:8000/docs.
 pytest
 ```
 
+Rápidos e sem custo: não chamam a Groq nem baixam o modelo de embedding.
+
+## Avaliação
+
+A suíte de testes garante que o código funciona; a de avaliação mede se a
+**Lu acerta** — se a busca traz o documento certo e se ela escolhe a
+ferramenta certa. Roda contra o modelo real e a Groq, então fica separada:
+
+```bash
+python -m evals              # tudo
+python -m evals retrieval    # só o RAG (sem custo de API)
+python -m evals ferramentas  # só escolha de tool (~21 chamadas à Groq)
+```
+
+Sai com código 1 se alguma métrica ficar abaixo do mínimo. Nada é
+executado nem gravado: a avaliação de ferramenta só pede a decisão do
+modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
+
+Última execução:
+
+| Métrica | Resultado |
+| --- | --- |
+| acerto@1 (documento certo em 1º) | 30/40 (75%) |
+| acerto@3 | 35/40 (87,5%) |
+| MRR | 0,808 |
+| rejeição de pergunta fora de escopo | 7/8 |
+| ferramenta correta | 17/18 (94,4%) |
+| respondeu sem consultar ferramenta | 0/18 |
+| conversa sem disparar ferramenta | 3/3 |
+
+A avaliação de ferramenta varia entre execuções — o modelo não é
+determinístico, e alguns casos têm mais de uma escolha defensável.
+
 ## Visão de produto
 
 A Lu é uma vendedora/atendente virtual. O cliente conversa em linguagem
@@ -140,8 +173,13 @@ agora é validar o fluxo de produto.
    - ~~Tool `buscar_conhecimento` e endpoint `/api/conhecimento`~~
 5. Dados reais — trocar mocks por integrações verdadeiras (catálogo,
    estoque, logística, financeiro) quando/se o projeto avançar pra isso.
-6. Avaliação e iteração — medir qualidade das respostas e das decisões de
-   tool calling.
+6. ~~**Avaliação e iteração** — medir qualidade do retrieval e das decisões
+   de tool calling~~
+   - ~~Suíte `evals/` com 40 casos de retrieval, 8 fora de escopo e 21 de
+     escolha de ferramenta~~
+   - ~~Métricas com mínimo que trava build (acerto@1, acerto@3, MRR)~~
+   - ~~Primeira iteração: escolha de ferramenta de 77,8% para 94,4%~~
+   - Pendente: melhorar acerto@1 do retrieval (hoje 75%)
 7. Rename final da pasta/projeto pra "Cérebro da Lu".
 
 ## Estado atual
@@ -158,6 +196,15 @@ agora é validar o fluxo de produto.
 - A busca exposta ao modelo devolve no máximo 10 produtos por vez (com o
   total encontrado), pra não estourar o contexto com 113 itens.
 - Ainda não há autenticação nem multi-usuário — é single-user, uso local.
+
+### Falhas de retrieval conhecidas
+
+A avaliação expõe 5 perguntas que não trazem o documento certo em 1º — o
+padrão é o cliente descrever um sintoma sem citar o produto ("a tomada é
+diferente" não chega no documento de voltagem; "ela reclama do barulho
+quando digito" cai em fones em vez de teclado). O caminho provável é
+enriquecer cada documento com as perguntas que ele responde, ou somar
+busca léxica à vetorial. Está medido e pendente, não resolvido.
 
 ### Limitação conhecida do RAG
 

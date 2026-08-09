@@ -76,3 +76,31 @@ def test_buscar_conhecimento_pela_tool():
 def test_buscar_conhecimento_exige_pergunta():
     resultado = tools.executar("buscar_conhecimento", {})
     assert "erro" in resultado
+
+
+def test_todo_parametro_opcional_aceita_null_no_schema():
+    """O modelo preenche opcional que não vai usar com null, e a Groq valida
+    o argumento contra o schema antes de entregar: parâmetro opcional que
+    só aceita string devolve erro 400 e derruba o chat."""
+    for schema in tools.TOOL_SCHEMAS:
+        parametros = schema["function"]["parameters"]
+        obrigatorios = set(parametros.get("required", []))
+        for nome, definicao in parametros.get("properties", {}).items():
+            if nome in obrigatorios:
+                continue
+            tipos = definicao["type"]
+            assert "null" in tipos, f"{schema['function']['name']}.{nome} não aceita null"
+
+
+def test_null_vira_default_do_service():
+    """Depois de passar pelo schema, o None precisa sumir antes do service,
+    senão vira `categoria=None` onde se esperava string."""
+    resultado = tools.executar("buscar_produtos", {"query": "notebook", "categoria": None})
+    assert resultado["total_encontrado"] > 0
+
+
+def test_null_em_todos_os_opcionais_de_uma_vez():
+    resultado = tools.executar(
+        "sugerir_produto", {"categoria": "notebooks", "criterio": None}
+    )
+    assert resultado["produto"]["categoria"] == "notebooks"
