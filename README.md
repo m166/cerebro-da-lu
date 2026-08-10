@@ -63,6 +63,7 @@ modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
 | acerto@1 (documento certo em 1º) | 49/52 (94,2%) |
 | acerto@3 | 52/52 (100%) |
 | MRR | 0,968 |
+| cobertura do domínio (sobrevive ao corte) | 52/52 (100%) |
 | rejeição de pergunta fora de escopo | 7/8 |
 | ferramenta correta | 16/18 (88,9%) |
 | respondeu sem consultar ferramenta | 1/18 |
@@ -224,14 +225,29 @@ indexadas não podem ser cópia dos casos de avaliação — há teste em
 termos de conteúdo. Doze casos do conjunto foram escritos depois do
 enriquecimento, justamente pra medir pergunta inédita.
 
-### Limitação conhecida do RAG
+### Busca híbrida: cada sinal tem um papel
 
-O corte por score (`SCORE_MINIMO_CONHECIMENTO`) derruba o ruído pior, mas
-**não é um filtro confiável de assunto**. O E5 comprime as similaridades
-numa faixa alta e as distribuições se sobrepõem: medindo 16 perguntas do
-domínio contra 8 fora dele, as do domínio ficaram entre 0.842 e 0.92 e as
-de fora chegaram a 0.863. Quem de fato segura resposta inventada é a
-persona, que manda a Lu admitir quando a base não cobre o assunto.
+O RAG combina embedding com BM25, mas eles não fazem a mesma coisa:
+
+- **Ordenar é com o embedding.** Foi medido: semântica pura acerta 94,2%
+  em 1º lugar, contra 92,3% da fusão por posto recíproco e 88,5% do BM25
+  sozinho. A hipótese de que fundir melhoraria o ranking não se sustentou.
+- **Filtrar é com os dois, em OU.** Um trecho entra se passar em qualquer
+  um dos cortes, porque os sinais falham em casos opostos: pergunta que
+  descreve sintoma ("pego ônibus lotado e queria abafar o barulho") tem
+  cosseno baixo (0,80) e léxico alto (8,9); pergunta curta e direta
+  ("quantos BTU pra um escritório de 25 metros?") é o contrário (0,88 e
+  2,8). Exigir os dois barrava as duas famílias.
+
+Com isso a cobertura do domínio vai a 52/52 mantendo 7/8 de rejeição —
+antes eram 49/52 e 7/8, ou seja, **3 perguntas legítimas eram respondidas
+com "não tenho essa informação"**. Isso passou muito tempo despercebido
+porque a avaliação media só a rejeição, nunca a cobertura; hoje mede as
+duas, e elas se puxam em direções opostas de propósito.
+
+Nenhum corte é filtro de assunto perfeito — 1 das 8 perguntas fora do
+domínio ainda passa. Quem segura resposta inventada continua sendo a
+persona, que manda a Lu admitir quando a base não cobre.
 
 ## Notas de desenvolvimento
 

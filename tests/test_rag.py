@@ -174,12 +174,34 @@ def test_service_respeita_limite_padrao():
 
 
 def test_service_corta_resultado_irrelevante(monkeypatch):
-    """Score alto demais no corte deve zerar os resultados — é o mecanismo
-    que faz a Lu admitir que não sabe em vez de inventar."""
+    """Cortes altos demais devem zerar os resultados — é o mecanismo que faz
+    a Lu admitir que não sabe em vez de inventar."""
     monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 0.99)
+    monkeypatch.setattr(config, "SCORE_LEXICAL_MINIMO", 10_000.0)
     resultado = services.buscar_conhecimento("qualquer pergunta obscura")
     assert resultado["encontrou"] is False
     assert resultado["trechos"] == []
+
+
+def test_basta_o_sinal_semantico(monkeypatch):
+    """Os sinais falham em casos opostos — pergunta que descreve sintoma tem
+    cosseno baixo e léxico alto, pergunta curta e direta é o contrário —,
+    então passar em um só já aceita o trecho."""
+    monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 0.0)
+    monkeypatch.setattr(config, "SCORE_LEXICAL_MINIMO", 10_000.0)
+    assert services.buscar_conhecimento("geladeira")["encontrou"] is True
+
+
+def test_basta_o_sinal_lexical(monkeypatch):
+    monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 2.0)
+    monkeypatch.setattr(config, "SCORE_LEXICAL_MINIMO", 0.0)
+    assert services.buscar_conhecimento("geladeira")["encontrou"] is True
+
+
+def test_busca_devolve_os_dois_sinais():
+    for documento in vectorstore.buscar("geladeira", k=2):
+        assert "score" in documento
+        assert "score_lexical" in documento
 
 
 def test_service_filtra_por_categoria():

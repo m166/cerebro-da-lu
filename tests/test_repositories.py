@@ -63,9 +63,35 @@ def test_listar_produtos_por_categoria():
     assert all(p["categoria"] == "notebooks" for p in produtos)
 
 
-def test_busca_exige_todos_os_termos():
+def test_busca_prefere_quem_casa_todos_os_termos():
     resultado = repositories.listar_produtos(query="notebook gamer")
     assert [p["nome"] for p in resultado] == ["Notebook Titan X15"]
+
+
+def test_busca_ignora_acento():
+    """O modelo escreve sem acento com frequência; exigir o acento fazia a
+    busca voltar vazia e ele gastar rodadas reformulando."""
+    com = repositories.listar_produtos(query="fone cancelamento ruído")
+    sem = repositories.listar_produtos(query="fone cancelamento ruido")
+    assert sem == com
+    assert sem
+
+
+def test_busca_cai_pra_casamento_parcial():
+    """Um termo a mais na frase não pode zerar o resultado."""
+    resultado = repositories.listar_produtos(query="fone cancelamento de ruido ativo")
+    assert resultado
+    assert "Fone" in resultado[0]["nome"]
+
+
+def test_casamento_parcial_ordena_por_termos_casados():
+    resultado = repositories.listar_produtos(query="geladeira inexistentetotal")
+    assert resultado
+    assert resultado[0]["categoria"] == "geladeiras"
+
+
+def test_busca_sem_nenhum_termo_util():
+    assert repositories.listar_produtos(query="   ") == repositories.listar_produtos()
 
 
 def test_busca_casa_por_categoria_tambem():

@@ -49,7 +49,12 @@ def buscar_conhecimento(pergunta: str, categoria: str = "", limite: Optional[int
     encontrados = repositories.buscar_conhecimento(
         pergunta, k=limite or config.LIMITE_CONHECIMENTO, categoria=categoria
     )
-    relevantes = [d for d in encontrados if d["score"] >= config.SCORE_MINIMO_CONHECIMENTO]
+    relevantes = [
+        d
+        for d in encontrados
+        if d["score"] >= config.SCORE_MINIMO_CONHECIMENTO
+        or d["score_lexical"] >= config.SCORE_LEXICAL_MINIMO
+    ]
 
     return {
         "pergunta": pergunta,

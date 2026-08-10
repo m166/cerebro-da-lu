@@ -5,6 +5,7 @@ Mensagens e pedidos vêm do SQLite; o catálogo vem do mock em
 escrita.
 """
 
+import unicodedata
 from typing import List, Optional
 
 from app import models, vectorstore
@@ -79,18 +80,43 @@ def atualizar_entrega_agendada(pedido_id: int, data_entrega: str) -> Optional[di
 
 # --- Catálogo -------------------------------------------------------------
 
-def _match(produto: dict, query: str) -> bool:
-    """Casa se todos os termos da busca aparecem em nome, descrição ou categoria."""
-    texto = f"{produto['nome']} {produto['descricao']} {produto['categoria']}".lower()
-    return all(termo in texto for termo in query.lower().split())
+def _sem_acento(texto: str) -> str:
+    texto = unicodedata.normalize("NFKD", texto.lower())
+    return "".join(c for c in texto if not unicodedata.combining(c))
+
+
+def _termos_casados(produto: dict, termos: List[str]) -> int:
+    texto = _sem_acento(f"{produto['nome']} {produto['descricao']} {produto['categoria']}")
+    return sum(1 for termo in termos if termo in texto)
 
 
 def listar_produtos(query: str = "", categoria: str = "", limite: Optional[int] = None) -> List[dict]:
+    """Busca por categoria e/ou texto livre.
+
+    Compara sem acento e, quando nenhum produto casa com a frase inteira,
+    cai pra casamento parcial ordenado por quantidade de termos. Exigir a
+    frase completa deixava a busca quebradiça — "fone cancelamento ruido"
+    voltava vazio por causa do acento, e "de ativo" a mais zerava o
+    resultado. Devolver vazio faz o modelo gastar rodadas de tool calling
+    reformulando a pergunta, e às vezes estourar o limite.
+    """
     resultado = catalogo.PRODUTOS
     if categoria:
         resultado = [p for p in resultado if p["categoria"] == categoria.lower()]
+
     if query:
-        resultado = [p for p in resultado if _match(p, query)]
+        termos = [t for t in _sem_acento(query).split() if len(t) > 1]
+        if termos:
+            completos = [p for p in resultado if _termos_casados(p, termos) == len(termos)]
+            if completos:
+                resultado = completos
+            else:
+                parciais = [(p, _termos_casados(p, termos)) for p in resultado]
+                parciais = sorted(
+                    ((p, n) for p, n in parciais if n > 0), key=lambda item: -item[1]
+                )
+                resultado = [p for p, _ in parciais]
+
     return resultado[:limite] if limite else resultado
 
 

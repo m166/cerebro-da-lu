@@ -70,6 +70,11 @@ services, então quem orquestra o modelo fica acima de ambos).
   traduzem pra `HTTPException` (o corpo sai como `{"detail": ...}`, que é
   o que o frontend lê); `ai/tools.py` traduz pra `{"erro": ...}`, formato
   que o modelo entende melhor que uma exceção.
+- **Ferramenta que devolve vazio custa caro.** O modelo reformula e chama
+  de novo, gastando rodada de tool calling — foi assim que a busca de
+  produto, sensível a acento, derrubava a resposta por estourar o limite.
+  Prefira degradar (casamento parcial, resultado aproximado) a devolver
+  lista vazia.
 - Sem comentários explicando o óbvio. Só quando houver decisão não óbvia
   (ex: por que a normalização do score é relativa aos candidatos).
 - Sem framework de frontend — mudanças de UI são HTML/CSS/JS direto em
@@ -164,7 +169,13 @@ Regras da avaliação:
 
 - `vectorstore.py` é infraestrutura (o análogo de `database.py`): carrega
   modelo e índice de forma lazy, em duas etapas, porque o modelo tem
-  centenas de MB.
+  centenas de MB. `bm25.py` é o índice léxico que ele usa junto.
+- **Ordenação é semântica; o BM25 filtra.** Medido: semântica pura acerta
+  94,2% em 1º contra 92,3% do RRF. Se for mexer nisso, meça de novo — o
+  `score_fusao` continua exposto pra facilitar.
+- **O corte de relevância é OU, não E.** Os sinais falham em casos
+  opostos (sintoma = cosseno baixo e léxico alto; pergunta curta = o
+  contrário). Trocar por E derruba a cobertura do domínio.
 - O modelo é da família **E5**, que exige os prefixos `query:` e
   `passage:` — sem eles a qualidade cai bastante. Os prefixos estão em
   `config.py` e são aplicados no `vectorstore.py`.

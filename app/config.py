@@ -17,7 +17,10 @@ PERSONA_PATH = BASE_DIR / "persona.md"
 STATIC_DIR = BASE_DIR / "static"
 
 # Quantas rodadas de tool calling o chat pode fazer antes de desistir.
-MAX_TOOL_ITERATIONS = 4
+# Seis, não quatro: uma pergunta que combina conhecimento e catálogo já
+# gasta três rodadas no caminho feliz, e qualquer reformulação de busca no
+# meio estourava o limite e derrubava a resposta.
+MAX_TOOL_ITERATIONS = 6
 
 # Quantos produtos a busca devolve pro modelo por padrão — o catálogo tem
 # mais de 100 itens e mandar todos estouraria o contexto sem necessidade.
@@ -37,13 +40,20 @@ PREFIXO_DOCUMENTO = "passage: "
 # Quantos trechos da base de conhecimento devolver por consulta.
 LIMITE_CONHECIMENTO = 3
 
-# Piso de similaridade. Atenção: com o E5 os scores são comprimidos numa
-# faixa alta e as distribuições se sobrepõem — medindo 16 perguntas do
-# domínio contra 8 fora dele, as do domínio ficaram entre 0.842 e 0.92 e as
-# de fora chegaram a 0.863. Ou seja, este corte derruba o pior ruído mas
-# NÃO é um filtro confiável de assunto. Quem de fato segura resposta
-# inventada é a persona, que manda a Lu admitir quando a base não cobre.
-SCORE_MINIMO_CONHECIMENTO = 0.83
+# Pisos de relevância. Um trecho é aceito quando passa em QUALQUER um dos
+# dois — é OU, não E.
+#
+# O motivo é que os sinais falham em casos opostos. Pergunta que descreve
+# sintoma ("pego ônibus lotado e queria abafar o barulho") tem cosseno
+# baixo, perto de 0.80, mas casa muitos termos: léxico 8.9. Pergunta curta
+# e direta ("quantos BTU pra um escritório de 25 metros?") é o contrário:
+# cosseno 0.88 e quase nenhum termo em comum. Exigir os dois barraria as
+# duas famílias; exigir um deles aceita ambas.
+#
+# Calibrados numa grade sobre 52 perguntas do domínio e 8 fora: nesta
+# combinação o domínio inteiro passa e 7 das 8 de fora são barradas.
+SCORE_MINIMO_CONHECIMENTO = 0.86
+SCORE_LEXICAL_MINIMO = 5.0
 
 
 def persona() -> str:
