@@ -27,7 +27,7 @@ _DOCUMENTOS = [
             "o pc fica lento com vários programas abertos",
         ),
         "A memória RAM define quantas coisas o computador consegue fazer ao mesmo tempo. "
-        "8GB dá conta de navegador, pacote office e streaming — é suficiente pra estudo e "
+        "8GB dá conta de navegador, pacote office e streaming, é suficiente pra estudo e "
         "trabalho de escritório. 16GB é o recomendado pra jogos atuais, edição de vídeo leve "
         "e quem deixa dezenas de abas abertas. 32GB só compensa pra renderização 3D, máquinas "
         "virtuais ou edição profissional. Comprar RAM demais é desperdício; de menos trava.",
@@ -115,7 +115,7 @@ _DOCUMENTOS = [
             "5G funciona em qualquer lugar?",
         ),
         "O 5G entrega internet móvel mais rápida e com menos atraso, mas só funciona onde há "
-        "cobertura — nas capitais está bem distribuído, no interior e em cidades pequenas ainda "
+        "cobertura, nas capitais está bem distribuído, no interior e em cidades pequenas ainda "
         "é irregular. Se a pessoa troca de celular a cada 4 ou 5 anos, vale garantir o 5G pra "
         "não ficar pra trás. Se troca com frequência e a região não tem cobertura, não é motivo "
         "pra pagar mais.",
@@ -173,7 +173,7 @@ _DOCUMENTOS = [
             "fone pra viagem de avião e transporte público",
             "vale pagar mais por ANC?",
         ),
-        "O cancelamento de ruído ativo usa microfones pra anular o som externo constante — motor "
+        "O cancelamento de ruído ativo usa microfones pra anular o som externo constante, motor "
         "de ônibus, ar-condicionado, avião. Faz muita diferença em transporte público e "
         "escritório barulhento, quando a pessoa quer abafar o barulho em volta. Não elimina bem "
         "vozes e sons agudos repentinos. Se o fone é usado em casa em ambiente silencioso, é um "
@@ -191,7 +191,7 @@ _DOCUMENTOS = [
         "Os TWS (totalmente sem fio, tipo earbuds) são práticos pra academia e deslocamento, mas "
         "têm menos bateria e som mais limitado. Os over-ear, que cobrem a orelha, entregam som "
         "melhor e mais conforto em uso longo, porém são grandes e esquentam. Fones com fio ainda "
-        "ganham em qualidade por preço e não precisam de carga — por isso são o padrão pra "
+        "ganham em qualidade por preço e não precisam de carga, por isso são o padrão pra "
         "produção musical, onde fidelidade importa mais que praticidade.",
     ),
     (
@@ -204,7 +204,7 @@ _DOCUMENTOS = [
             "caixa pra levar na piscina ou praia",
         ),
         "Potência RMS é a que a caixa sustenta de forma contínua e é o número honesto. Potência "
-        "PMPO é pico instantâneo e serve mais pra marketing — por isso uma caixa anunciada com "
+        "PMPO é pico instantâneo e serve mais pra marketing, por isso uma caixa anunciada com "
         "centenas de watts pode soar fraca. Pra uso pessoal em quarto, de 10 a 20W RMS basta. "
         "Pra sala e reuniões pequenas, de 30 a 60W. Só festa em área externa justifica centenas "
         "de watts. Também vale olhar a certificação de resistência à água (IPX7 aguenta "
@@ -280,7 +280,7 @@ _DOCUMENTOS = [
         ),
         "O modelo inverter varia a rotação do compressor em vez de ligar e desligar, o que "
         "economiza de 30% a 40% de energia e faz menos barulho. Custa mais caro na compra e "
-        "compensa pra quem usa várias horas por dia — em uso esporádico, a economia demora a "
+        "compensa pra quem usa várias horas por dia, em uso esporádico, a economia demora a "
         "pagar a diferença. Modelos portáteis não precisam de instalação, mas são menos "
         "eficientes e mais barulhentos que os split.",
     ),
@@ -310,7 +310,7 @@ _DOCUMENTOS = [
         "A indução aquece mais rápido, tem controle preciso de temperatura e é mais segura, já "
         "que a superfície esquenta pouco. Exige panelas com fundo magnético e uma instalação "
         "elétrica que aguente a carga. O fogão a gás funciona com qualquer panela, custa menos "
-        "e não depende de energia elétrica pra acender — ainda é a escolha mais prática pra "
+        "e não depende de energia elétrica pra acender, ainda é a escolha mais prática pra "
         "maioria das casas brasileiras.",
     ),
     (
@@ -356,7 +356,7 @@ _DOCUMENTOS = [
         "melhor. Switch azul é barulhento e tem clique marcante, ótimo pra digitar e péssimo "
         "pra ambiente compartilhado, porque o barulho ao digitar incomoda quem está por perto. "
         "Switch vermelho é linear e silencioso, preferido pra jogos. Switch marrom fica no "
-        "meio-termo. Layout ABNT2 é o brasileiro, com tecla de cedilha — vale conferir, porque "
+        "meio-termo. Layout ABNT2 é o brasileiro, com tecla de cedilha, vale conferir, porque "
         "teclado sem ela incomoda no dia a dia.",
     ),
     (
@@ -370,7 +370,7 @@ _DOCUMENTOS = [
         ),
         "DPI é a sensibilidade do sensor. Números altíssimos (16000, 26000) viram marketing: a "
         "maioria das pessoas joga entre 800 e 3200 DPI. O que importa mais é a precisão do "
-        "sensor e o peso — mouses leves, abaixo de 80g, cansam menos em uso longo. Pra quem "
+        "sensor e o peso, mouses leves, abaixo de 80g, cansam menos em uso longo. Pra quem "
         "sente dor no punho depois de horas no computador, o mouse vertical muda a posição da "
         "mão e costuma aliviar.",
     ),
@@ -386,7 +386,7 @@ _DOCUMENTOS = [
         "Tanque de tinta tem o menor custo por página colorida e é ideal pra quem imprime foto e "
         "documento em casa. Laser monocromática é imbatível pra volume alto de texto em preto: "
         "imprime rápido, o toner rende muito e não seca se ficar parada. Jato de tinta com "
-        "cartucho só compensa pra quem imprime pouquíssimo — o cartucho seca e sai caro por "
+        "cartucho só compensa pra quem imprime pouquíssimo, o cartucho seca e sai caro por "
         "página.",
     ),
     (
@@ -401,7 +401,7 @@ _DOCUMENTOS = [
         "O essencial é apoio lombar ajustável, altura regulável e braços que permitam manter o "
         "cotovelo em 90 graus. Encosto em tela ventila melhor em clima quente; estofado é mais "
         "confortável no frio. Cadeira gamer costuma ter visual esportivo e reclinar bastante, "
-        "mas nem toda cadeira gamer é ergonômica de verdade — pra quem passa 8 horas sentado e "
+        "mas nem toda cadeira gamer é ergonômica de verdade, pra quem passa 8 horas sentado e "
         "sente dor nas costas, o ajuste lombar vale mais que o design.",
     ),
     (
@@ -416,7 +416,7 @@ _DOCUMENTOS = [
         ),
         "A densidade da espuma (D28, D33, D45) indica firmeza e suporte de peso: quanto maior o "
         "número, mais firme e mais peso aguenta. Molas ensacadas se movem de forma independente, "
-        "o que evita que um lado balance quando a outra pessoa se mexe ou levanta — a melhor "
+        "o que evita que um lado balance quando a outra pessoa se mexe ou levanta, a melhor "
         "opção pra casal com sono leve. Látex é durável, ventila bem e é hipoalergênico, porém é "
         "o mais caro. Pillow top é a camada extra de conforto sobre o colchão.",
     ),
@@ -449,7 +449,7 @@ _DOCUMENTOS = [
         "A mirrorless tem sensor grande e lente trocável: é o salto real de qualidade em relação "
         "ao celular, principalmente com pouca luz e para desfocar o fundo. A câmera de ação é "
         "feita pra movimento, resiste a água e queda, mas tem sensor pequeno. Pra foto casual, "
-        "um bom celular já resolve — a câmera dedicada compensa quando a pessoa quer aprender "
+        "um bom celular já resolve, a câmera dedicada compensa quando a pessoa quer aprender "
         "fotografia ou precisa de qualidade profissional.",
     ),
     (
@@ -461,7 +461,7 @@ _DOCUMENTOS = [
             "quero registrar treino sem levar o telefone",
             "o que é ECG e oxímetro no relógio?",
         ),
-        "GPS integrado permite registrar corrida e pedalada sem levar o celular junto — quem só "
+        "GPS integrado permite registrar corrida e pedalada sem levar o celular junto, quem só "
         "quer contar passos não precisa. Monitoramento cardíaco e de sono existe até nos modelos "
         "básicos; ECG e medição de oxigênio são de linha premium. Atenção à bateria: relógios "
         "com tela AMOLED e muitos recursos duram de 1 a 3 dias, enquanto pulseiras simples "
@@ -495,7 +495,7 @@ _DOCUMENTOS = [
         "Até 800W dá conta de suco, vitamina e massa de bolo. Acima de 1000W com lâminas de inox "
         "é o que tritura gelo e faz creme mais encorpado sem forçar o motor. Copo de vidro não "
         "mancha nem retém cheiro, mas pesa e quebra; o de plástico é prático e mais leve. O "
-        "mixer de mão é melhor pra bater direto na panela — sopa, caldo e purê — e ocupa muito "
+        "mixer de mão é melhor pra bater direto na panela, sopa, caldo e purê, e ocupa muito "
         "menos espaço na cozinha.",
     ),
     (
@@ -538,7 +538,7 @@ _DOCUMENTOS = [
             "tablet com chip 4G compensa?",
             "posso usar tablet no lugar do computador?",
         ),
-        "Pra consumir conteúdo — vídeo, leitura, navegação — o tablet é melhor que o notebook por "
+        "Pra consumir conteúdo, vídeo, leitura, navegação, o tablet é melhor que o notebook por "
         "ser leve e ter bateria longa. Pra produzir texto e planilha, só compensa com teclado "
         "acoplado, e ainda assim com limitações de sistema, o que pesa pra quem estuda ou "
         "trabalha escrevendo. Suporte a caneta é o diferencial real pra quem desenha ou faz "
@@ -603,7 +603,7 @@ _DOCUMENTOS = [
             "em quanto tempo a economia paga a diferença de preço?",
         ),
         "O selo do Procel classifica o consumo de A (mais econômico) até E. Em aparelhos que "
-        "ficam ligados o tempo todo — geladeira e ar-condicionado — a diferença entre A e C "
+        "ficam ligados o tempo todo, geladeira e ar-condicionado, a diferença entre A e C "
         "aparece na conta de luz todo mês e costuma pagar a diferença de preço em poucos anos. "
         "Em produtos de uso esporádico, o impacto é pequeno e não vale pagar muito mais caro só "
         "pelo selo.",
@@ -621,7 +621,7 @@ _DOCUMENTOS = [
         "A garantia legal é de 90 dias para produto durável, e o fabricante costuma oferecer "
         "garantia adicional de 1 ano. Guarde sempre a nota fiscal: é ela que comprova a data da "
         "compra. Em compra pela internet existe o direito de arrependimento de 7 dias a partir "
-        "do recebimento, sem precisar justificar o motivo — dá pra devolver e receber o dinheiro "
+        "do recebimento, sem precisar justificar o motivo, dá pra devolver e receber o dinheiro "
         "de volta. Defeito que aparece dentro da garantia deve ser resolvido em até 30 dias.",
     ),
 ]

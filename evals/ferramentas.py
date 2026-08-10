@@ -1,7 +1,7 @@
 """Avaliação da escolha de ferramenta: a Lu chama a tool certa?
 
 Consome tokens da Groq (uma chamada por caso). Só pede a decisão do
-modelo, sem rodar o loop de tool calling — assim nada é executado nem
+modelo, sem rodar o loop de tool calling, assim nada é executado nem
 gravado: não cria pedido, não escreve histórico.
 """
 

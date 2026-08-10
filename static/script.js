@@ -23,7 +23,7 @@ const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 function formatarData(valor) {
   if (!valor) return "";
   // Reformata a string em vez de usar Date: "2026-09-15" seria lido como
-  // UTC e, no fuso do Brasil, exibido como 14/09 — um dia antes do que o
+  // UTC e, no fuso do Brasil, exibido como 14/09, um dia antes do que o
   // cliente agendou.
   const [ano, mes, dia] = String(valor).slice(0, 10).split("-");
   return dia ? `${dia}/${mes}/${ano}` : String(valor);
@@ -282,7 +282,7 @@ function criarCardPedido(pedido) {
       mostrar("consultando...");
       try {
         const r = await pedirJson(`/api/pedidos/${pedido.id}/rastreio`);
-        mostrar(`${r.etapa_atual} — ${r.localizacao}`);
+        mostrar(`${r.etapa_atual}, ${r.localizacao}`);
       } catch (err) {
         mostrar(err.message);
       }

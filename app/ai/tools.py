@@ -2,7 +2,7 @@
 
 `TOOL_SCHEMAS` descreve as ferramentas no formato Groq/OpenAI.
 `executar(nome, args)` chama o service correspondente e converte erros de
-domínio em `{"erro": ...}` — o modelo lida melhor com isso do que com
+domínio em `{"erro": ...}`, o modelo lida melhor com isso do que com
 exceção.
 """
 
@@ -69,7 +69,7 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 "o que cada especificação significa e o que olhar na hora de escolher "
                 "(quanta RAM, quantos BTUs, litragem de geladeira, tipo de switch de teclado etc.). "
                 "Use SEMPRE que o cliente perguntar 'qual é melhor pra mim', 'o que significa X' "
-                "ou descrever uma necessidade em vez de um produto — é o que permite explicar o "
+                "ou descrever uma necessidade em vez de um produto, é o que permite explicar o "
                 "porquê da recomendação em vez de só comparar números do catálogo."
             ),
             "parameters": {
@@ -107,7 +107,7 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 "Sugere o melhor produto pra necessidade do cliente, combinando "
                 "preço, prazo de entrega e avaliação (ou um critério específico). "
                 "Use quando o cliente pedir 'o melhor', 'o mais barato' ou 'o que "
-                "você indica' de um tipo de produto — chame direto com a categoria, "
+                "você indica' de um tipo de produto, chame direto com a categoria, "
                 "sem listar categorias antes."
             ),
             "parameters": {
@@ -131,7 +131,7 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                 "Compara produtos lado a lado e diz quem ganha em preço, prazo, "
                 "avaliação e custo-benefício. Use quando o cliente pedir pra "
                 "comparar ou estiver decidindo entre opções de uma mesma "
-                "categoria — chame direto com a categoria, sem listar antes."
+                "categoria, chame direto com a categoria, sem listar antes."
             ),
             "parameters": {
                 "type": "object",

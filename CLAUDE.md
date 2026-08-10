@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Guia para trabalhar neste repositório. Leia o `README.md` primeiro pra
-contexto de produto — este arquivo é sobre como mexer no código.
+contexto de produto, este arquivo é sobre como mexer no código.
 
 ## O que é o projeto
 
@@ -9,7 +9,7 @@ contexto de produto — este arquivo é sobre como mexer no código.
 assistente de e-commerce que atende via chat e usa **tool calling** pra
 consultar catálogo/estoque, criar e rastrear pedidos, comparar e sugerir
 produtos e gerar 2ª via de boleto/NF. Tudo hoje roda sobre **dados
-mockados** (catálogo fixo em Python, pedidos em SQLite) — não há integração
+mockados** (catálogo fixo em Python, pedidos em SQLite), não há integração
 real com sistemas do Magalu.
 
 ## Estrutura em camadas
@@ -51,7 +51,7 @@ routers → ai.chat → ai.tools → services
 ```
 
 Nunca inverta isso. Em particular, `services.py` **não** importa
-`ai/` — foi assim que o import circular foi evitado (tools precisa dos
+`ai/`, foi assim que o import circular foi evitado (tools precisa dos
 services, então quem orquestra o modelo fica acima de ambos).
 
 ## Convenções
@@ -60,6 +60,9 @@ services, então quem orquestra o modelo fica acima de ambos).
   do Brasil. Nomes de domínio (`produto`, `pedido`, `estoque`,
   `avaliacao`) em português; nomes de infra (`get_connection`, `router`,
   `lifespan`) em inglês, seguindo o framework.
+- **Nunca use travessão (—) em nenhum texto do projeto**: docs, comentário,
+  persona, mensagem de commit, texto de UI. Use vírgula, dois-pontos,
+  parênteses ou duas frases. Vale também para o meia-risca (–).
 - **Python 3.9** no venv: não use `X | None` em anotações avaliadas em
   runtime. Em `schemas.py` (Pydantic) use `Optional[...]`; em módulos
   comuns, `Optional[...]` ou `from __future__ import annotations`.
@@ -71,16 +74,16 @@ services, então quem orquestra o modelo fica acima de ambos).
   o que o frontend lê); `ai/tools.py` traduz pra `{"erro": ...}`, formato
   que o modelo entende melhor que uma exceção.
 - **Ferramenta que devolve vazio custa caro.** O modelo reformula e chama
-  de novo, gastando rodada de tool calling — foi assim que a busca de
+  de novo, gastando rodada de tool calling, foi assim que a busca de
   produto, sensível a acento, derrubava a resposta por estourar o limite.
   Prefira degradar (casamento parcial, resultado aproximado) a devolver
   lista vazia.
 - Sem comentários explicando o óbvio. Só quando houver decisão não óbvia
   (ex: por que a normalização do score é relativa aos candidatos).
-- Sem framework de frontend — mudanças de UI são HTML/CSS/JS direto em
+- Sem framework de frontend, mudanças de UI são HTML/CSS/JS direto em
   `static/`.
-- No frontend, nunca monte HTML por concatenação com dado vindo da API —
-  use `textContent` e `createElement` (é o padrão já seguido em
+- No frontend, nunca monte HTML por concatenação com dado vindo da API.
+  Use `textContent` e `createElement` (é o padrão já seguido em
   `script.js`).
 - **Não formate data com `new Date(...)` no frontend.** Uma string como
   `"2026-09-15"` é lida como UTC e, no fuso do Brasil, exibida um dia
@@ -88,8 +91,8 @@ services, então quem orquestra o modelo fica acima de ambos).
 - SQLite é suficiente enquanto for single-user/local. Não introduza
   Postgres ou ORM sem necessidade real (por isso `models.py` guarda DDL,
   não classes de ORM).
-- Ao adicionar produto no catálogo, mantenha o mínimo de 4 por categoria
-  — é o que viabiliza comparação, e há teste garantindo isso.
+- Ao adicionar produto no catálogo, mantenha o mínimo de 4 por
+  categoria. É o que viabiliza comparação, e há teste garantindo isso.
 
 ## Rodando e testando
 
@@ -108,18 +111,18 @@ Atenção: o entrypoint é `app.main:app` (não `main:app`).
   `tool_call_falso`.
 - A fixture `banco_isolado` é `autouse`: cada teste ganha um SQLite
   temporário, nunca o `cerebro.db` do usuário.
-- Não acople testes a IDs fixos de produto — use `id_por_nome("...")`,
+- Não acople testes a IDs fixos de produto, use `id_por_nome("...")`,
   senão inserir um produto no meio do catálogo quebra a suíte.
 - **Nenhum teste baixa o modelo de embedding.** A fixture `rag_sem_download`
   é `autouse` e troca o encoder por um saco de palavras determinístico.
   Como ele é léxico e não semântico, **não escreva teste afirmando que a
-  pergunta X traz o documento Y** — isso mede o encoder falso, não o
+  pergunta X traz o documento Y**, isso mede o encoder falso, não o
   sistema. Qualidade semântica se verifica manualmente, com o modelo real.
 
 ## Validando a UI sem driver de browser
 
 Não há playwright nem node no ambiente, mas o Chrome instalado tira
-screenshot em headless — e **olhar a tela pega o que teste de API não
+screenshot em headless, e **olhar a tela pega o que teste de API não
 pega** (foi assim que apareceu uma data de entrega exibida um dia antes).
 
 ```bash
@@ -141,7 +144,7 @@ São coisas diferentes e não devem se misturar:
 - **`tests/`** verifica que o código funciona. Roda em segundos, é
   determinístico, não chama a Groq nem baixa modelo. Toda mudança de
   código passa por aqui.
-- **`evals/`** mede se a Lu **acerta** — retrieval e escolha de
+- **`evals/`** mede se a Lu **acerta**: retrieval e escolha de
   ferramenta. Usa o modelo real e a Groq, demora e custa token. Rode
   depois de mexer em prompt, persona, descrição de tool ou base de
   conhecimento:
@@ -162,7 +165,7 @@ Regras da avaliação:
   gíria e sem acento. Usar as palavras do título do documento infla a
   métrica e não mede nada.
 - Se um caso falhar, considere que a expectativa pode estar errada antes
-  de mexer no sistema — já aconteceu de o caso pedir tool onde a persona
+  de mexer no sistema, já aconteceu de o caso pedir tool onde a persona
   manda perguntar primeiro.
 
 ## Sobre o RAG
@@ -171,24 +174,24 @@ Regras da avaliação:
   modelo e índice de forma lazy, em duas etapas, porque o modelo tem
   centenas de MB. `bm25.py` é o índice léxico que ele usa junto.
 - **Ordenação é semântica; o BM25 filtra.** Medido: semântica pura acerta
-  94,2% em 1º contra 92,3% do RRF. Se for mexer nisso, meça de novo — o
+  94,2% em 1º contra 92,3% do RRF. Se for mexer nisso, meça de novo, o
   `score_fusao` continua exposto pra facilitar.
 - **O corte de relevância é OU, não E.** Os sinais falham em casos
   opostos (sintoma = cosseno baixo e léxico alto; pergunta curta = o
   contrário). Trocar por E derruba a cobertura do domínio.
 - O modelo é da família **E5**, que exige os prefixos `query:` e
-  `passage:` — sem eles a qualidade cai bastante. Os prefixos estão em
+  `passage:`, sem eles a qualidade cai bastante. Os prefixos estão em
   `config.py` e são aplicados no `vectorstore.py`.
 - `SCORE_MINIMO_CONHECIMENTO` é um piso fraco, calibrado empiricamente.
   Com o E5 as distribuições de pergunta no domínio e fora dele se
-  sobrepõem, então **ele não é filtro de assunto confiável** — quem segura
+  sobrepõem, então **ele não é filtro de assunto confiável**, quem segura
   resposta inventada é a persona. Se trocar de modelo, recalibre.
 - Documento novo em `conhecimento.py` com `categoria` preenchida precisa
   usar uma categoria que exista no `catalogo.py`, senão o filtro nunca o
   encontra (há teste garantindo isso).
 - **Todo documento declara `perguntas`** (mínimo 3), que entram no texto
   indexado. É o que liga o vocabulário de especificação do corpo ao de
-  sintoma do cliente — foi o que levou o acerto@1 de 75% pra 94,2%. Ao
+  sintoma do cliente, foi o que levou o acerto@1 de 75% pra 94,2%. Ao
   criar documento, escreva as perguntas incluindo sinônimos populares
   ("fritadeira" pra air fryer, "tomada" pra voltagem).
 - **Não copie caso do `evals/` pra dentro das `perguntas`.** Isso vira
@@ -199,11 +202,11 @@ Regras da avaliação:
 
 Subagentes dedicados em `.claude/agents/`:
 
-- **backend-genai-specialist** — camadas `services`/`repositories`/
+- **backend-genai-specialist**: camadas `services`/`repositories`/
   `routers`, schema do SQLite, tool calling e prompts.
-- **frontend-specialist** — `static/`, UX do chat e do catálogo.
-- **test-specialist** — suíte pytest, fixtures e mocks da Groq.
-- **git-specialist** — commits, branches, conflitos.
+- **frontend-specialist**: `static/`, UX do chat e do catálogo.
+- **test-specialist**: suíte pytest, fixtures e mocks da Groq.
+- **git-specialist**: commits, branches, conflitos.
 
 Prefira delegar pro especialista quando a tarefa for claramente da área
 dele.

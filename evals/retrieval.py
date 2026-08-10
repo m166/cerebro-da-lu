@@ -1,7 +1,7 @@
 """Avaliação do RAG: a busca traz o documento certo?
 
 Usa o modelo de embedding real (baixa na primeira execução) e não gasta
-token de API — só CPU.
+token de API, só CPU.
 """
 
 from typing import List, Tuple
@@ -39,7 +39,7 @@ def avaliar_acerto() -> Resultado:
             reciprocos += 1
         elif posicao > 1:
             # Está no top-K mas perdeu o 1º lugar. Não conta como erro, e
-            # antes disso ficava invisível — que é justamente o caso que
+            # antes disso ficava invisível, que é justamente o caso que
             # rende diagnóstico: dá pra ver quem passou na frente.
             acertos_topk += 1
             reciprocos += 1 / posicao
@@ -72,7 +72,7 @@ def avaliar_acerto() -> Resultado:
 def _passa_no_corte(pergunta: str) -> List[dict]:
     """Espelha o service: mesmo k e mesmos cortes.
 
-    Usar k=1 aqui mediria outra coisa — o service entrega até
+    Usar k=1 aqui mediria outra coisa, o service entrega até
     LIMITE_CONHECIMENTO trechos, e basta um passar pra Lu ter contexto.
     """
     return [
@@ -88,7 +88,7 @@ def avaliar_cobertura() -> Resultado:
 
     Mede o outro lado da rejeição, que ficava sem medida: um corte muito
     apertado faz a Lu responder "não tenho essa informação" sobre assunto
-    que a base cobre — e nada apontava isso.
+    que a base cobre, e nada apontava isso.
     """
     cobertas = 0
     erros = []

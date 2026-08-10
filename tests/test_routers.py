@@ -192,7 +192,7 @@ def test_chat_com_tool_call(groq_falso):
 
 
 def test_chat_nao_persiste_mecanica_de_tool_calling(groq_falso):
-    """Só o texto final entra no histórico — tool_calls não viram mensagem."""
+    """Só o texto final entra no histórico, tool_calls não viram mensagem."""
     chamada = tool_call_falso("listar_categorias", "{}")
     groq_falso(
         resposta_do_modelo(content="", tool_calls=[chamada]),

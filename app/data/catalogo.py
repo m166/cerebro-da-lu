@@ -2,7 +2,7 @@
 com o catálogo/estoque do Magalu.
 
 Cada categoria tem no mínimo 4 produtos com preço, prazo, avaliação e
-estoque bem distribuídos — de propósito, pra que comparação e sugestão
+estoque bem distribuídos, de propósito, pra que comparação e sugestão
 tenham trade-offs reais (o mais barato raramente é o melhor avaliado).
 """
 

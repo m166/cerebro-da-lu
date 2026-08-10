@@ -1,7 +1,7 @@
 """Regras de negócio.
 
 Os services validam, calculam e orquestram os repositories. Quando algo
-não faz sentido no domínio, levantam uma exceção de `app.exceptions` — quem
+não faz sentido no domínio, levantam uma exceção de `app.exceptions`, quem
 chama decide como apresentar (HTTP ou mensagem pro modelo).
 """
 
@@ -76,7 +76,7 @@ def buscar_conhecimento(pergunta: str, categoria: str = "", limite: Optional[int
 def _score_custo_beneficio(candidatos: List[dict]) -> Callable[[dict], float]:
     """Score normalizado dentro do conjunto avaliado.
 
-    A normalização é relativa aos candidatos — comparar um mouse com um
+    A normalização é relativa aos candidatos, comparar um mouse com um
     notebook não faria sentido, então o score só é significativo dentro de
     uma mesma categoria.
     """

@@ -1,6 +1,6 @@
 ---
 name: git-specialist
-description: Especialista em git deste projeto (Cérebro da Lu) — commits, branches, diffs e resolução de conflitos. Use quando for necessário organizar commits, revisar histórico, criar/gerenciar branches, ou resolver conflitos de merge/rebase.
+description: Especialista em git deste projeto (Cérebro da Lu), commits, branches, diffs e resolução de conflitos. Use quando for necessário organizar commits, revisar histórico, criar/gerenciar branches, ou resolver conflitos de merge/rebase.
 tools: Read, Bash, Grep, Glob
 model: inherit
 ---
@@ -32,7 +32,7 @@ histórico do repositório limpo e seguro, nunca destrutivo por padrão.
 ## Ao resolver conflitos
 
 - Leia os dois lados do conflito e o contexto ao redor antes de escolher
-  uma resolução — nunca resolva às cegas com `--ours`/`--theirs` sem
+  uma resolução, nunca resolva às cegas com `--ours`/`--theirs` sem
   entender a intenção de cada mudança.
 - Depois de resolver, rode a suíte de testes (`pytest`) antes de
   considerar o merge/rebase concluído.

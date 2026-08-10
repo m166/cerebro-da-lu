@@ -1,6 +1,6 @@
 """Orquestração da conversa: histórico + loop de tool calling.
 
-Camada acima dos services — é aqui que o modelo decide quais ferramentas
+Camada acima dos services, é aqui que o modelo decide quais ferramentas
 chamar. Só o texto final (user/assistant) é persistido; as chamadas de
 ferramenta ficam fora do histórico salvo.
 """

@@ -1,6 +1,6 @@
 """Testes do RAG.
 
-Rodam com o encoder falso da fixture `rag_sem_download` — verificam a
+Rodam com o encoder falso da fixture `rag_sem_download`, verificam a
 mecânica (índice, ranking, corte por score, filtro de categoria), não a
 qualidade semântica, que depende do modelo real.
 """
@@ -28,7 +28,7 @@ def test_documentos_tem_titulo_e_texto():
 
 def test_todo_documento_tem_perguntas():
     """As perguntas fazem a ponte entre o vocabulário de especificação do
-    corpo e o de sintoma que o cliente usa — sem elas o acerto@1 cai."""
+    corpo e o de sintoma que o cliente usa, sem elas o acerto@1 cai."""
     for documento in conhecimento.DOCUMENTOS:
         assert len(documento["perguntas"]) >= 3, documento["titulo"]
 
@@ -63,7 +63,7 @@ def test_perguntas_do_doc_nao_copiam_os_casos_do_eval():
 
     A comparação ignora palavras estruturais: "qual a diferença de OLED pra
     QLED" e "qual a diferença de SSD pra HD" compartilham a forma da frase,
-    não o assunto — isso não é contaminação.
+    não o assunto, isso não é contaminação.
     """
     import re
     import unicodedata
@@ -111,7 +111,7 @@ def test_documento_e_o_primeiro_resultado_do_proprio_texto():
     """Propriedade válida pra qualquer encoder: perguntando com o texto
     exato de um documento, ele tem que vir em primeiro.
 
-    Não dá pra afirmar mais que isso aqui — julgar se 'meu quarto tem 12m2'
+    Não dá pra afirmar mais que isso aqui, julgar se 'meu quarto tem 12m2'
     traz o documento de BTUs mede a qualidade semântica do modelo real, que
     esta suíte não carrega de propósito.
     """
@@ -174,7 +174,7 @@ def test_service_respeita_limite_padrao():
 
 
 def test_service_corta_resultado_irrelevante(monkeypatch):
-    """Cortes altos demais devem zerar os resultados — é o mecanismo que faz
+    """Cortes altos demais devem zerar os resultados, é o mecanismo que faz
     a Lu admitir que não sabe em vez de inventar."""
     monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 0.99)
     monkeypatch.setattr(config, "SCORE_LEXICAL_MINIMO", 10_000.0)
@@ -184,8 +184,8 @@ def test_service_corta_resultado_irrelevante(monkeypatch):
 
 
 def test_basta_o_sinal_semantico(monkeypatch):
-    """Os sinais falham em casos opostos — pergunta que descreve sintoma tem
-    cosseno baixo e léxico alto, pergunta curta e direta é o contrário —,
+    """Os sinais falham em casos opostos, pergunta que descreve sintoma tem
+    cosseno baixo e léxico alto, pergunta curta e direta é o contrário,
     então passar em um só já aceita o trecho."""
     monkeypatch.setattr(config, "SCORE_MINIMO_CONHECIMENTO", 0.0)
     monkeypatch.setattr(config, "SCORE_LEXICAL_MINIMO", 10_000.0)

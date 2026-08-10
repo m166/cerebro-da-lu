@@ -43,7 +43,7 @@ Rápidos e sem custo: não chamam a Groq nem baixam o modelo de embedding.
 ## Avaliação
 
 A suíte de testes garante que o código funciona; a de avaliação mede se a
-**Lu acerta** — se a busca traz o documento certo e se ela escolhe a
+**Lu acerta**, se a busca traz o documento certo e se ela escolhe a
 ferramenta certa. Roda contra o modelo real e a Groq, então fica separada:
 
 ```bash
@@ -69,7 +69,7 @@ modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
 | respondeu sem consultar ferramenta | 1/18 |
 | conversa sem disparar ferramenta | 3/3 |
 
-A avaliação de ferramenta varia entre execuções — o modelo não é
+A avaliação de ferramenta varia entre execuções, o modelo não é
 determinístico, e alguns casos têm mais de uma escolha defensável. O
 retrieval é estável.
 
@@ -80,20 +80,20 @@ execução em vez de passar despercebida.
 
 A Lu é uma vendedora/atendente virtual. O cliente conversa em linguagem
 natural e ela usa **tool calling** (function calling da Groq) pra acionar
-funções de backend — consulta de catálogo, criação de pedido, rastreio etc.
-— em vez de só "conversar". As funções hoje rodam sobre dados mockados
+funções de backend (consulta de catálogo, criação de pedido, rastreio e
+outras) em vez de só "conversar". As funções hoje rodam sobre dados mockados
 (catálogo fixo, pedidos em SQLite), simulando o que seria uma integração
 real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
 
 ### Funcionalidades
 
 - **Catálogo de 113 produtos** em 27 categorias, com no mínimo 4 produtos
-  por categoria — de propósito, pra que comparar opções faça sentido.
-- **Consultar pedidos** (mockados) — status, itens, valor.
-- **Gerar pedidos novos** — a partir da conversa ("quero comprar X").
+  por categoria, de propósito, pra que comparar opções faça sentido.
+- **Consultar pedidos** (mockados), status, itens, valor.
+- **Gerar pedidos novos**: a partir da conversa ("quero comprar X").
 - **Consultar estoque** de um produto.
 - **Sugerir o melhor produto** pra uma necessidade, combinando preço, prazo
-  de entrega e avaliação — não só o mais barato.
+  de entrega e avaliação, não só o mais barato.
 - **Comparar produtos** lado a lado, apontando quem ganha em cada critério.
 - **Agendar entrega** pra uma data escolhida pelo cliente.
 - **Base de conhecimento (RAG)** com busca semântica sobre tecnologia: o
@@ -101,10 +101,10 @@ real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
   que permite responder "meu quarto tem 12m² e bate sol" com "9000 BTUs,
   e por isso este modelo" em vez de só listar preço.
 - **2ª via de boleto ou nota fiscal** (mockado).
-- **Rastreio de pedido** — onde está, etapa atual.
-- **Catálogo navegável** — painel com filtro por categoria e busca, onde o
+- **Rastreio de pedido**: onde está, etapa atual.
+- **Catálogo navegável**: painel com filtro por categoria e busca, onde o
   cliente explora e pede direto, além de conversar pelo chat.
-- **Painel de pedidos** — lista os pedidos e permite rastrear, agendar
+- **Painel de pedidos**: lista os pedidos e permite rastrear, agendar
   entrega e gerar 2ª via de boleto/NF sem passar pelo chat.
 
 ## Arquitetura
@@ -135,7 +135,7 @@ Dependências fluem numa direção só:
 `routers → services → repositories → database/data`, e
 `routers → ai.chat → ai.tools → services`.
 
-Sem framework de frontend (React etc.) e sem ORM por enquanto — o objetivo
+Sem framework de frontend (React etc.) e sem ORM por enquanto, o objetivo
 agora é validar o fluxo de produto.
 
 ### Endpoints principais
@@ -173,15 +173,15 @@ agora é validar o fluxo de produto.
    - ~~Tool calling ligando o chat às funções acima~~
    - ~~Catálogo navegável na UI, com filtro por categoria e busca~~
    - ~~Estrutura em camadas (routers/services/repositories/schemas/models)~~
-4. ~~**RAG** — base vetorial de conhecimento sobre produtos/tecnologias pra
+4. ~~**RAG**, base vetorial de conhecimento sobre produtos/tecnologias pra
    fundamentar as sugestões~~
    - ~~40 documentos cobrindo as categorias do catálogo + temas gerais
      (voltagem, eficiência energética, garantia)~~
    - ~~Busca semântica com embeddings locais (`intfloat/multilingual-e5-small`)~~
    - ~~Tool `buscar_conhecimento` e endpoint `/api/conhecimento`~~
-5. Dados reais — trocar mocks por integrações verdadeiras (catálogo,
+5. Dados reais, trocar mocks por integrações verdadeiras (catálogo,
    estoque, logística, financeiro) quando/se o projeto avançar pra isso.
-6. ~~**Avaliação e iteração** — medir qualidade do retrieval e das decisões
+6. ~~**Avaliação e iteração**, medir qualidade do retrieval e das decisões
    de tool calling~~
    - ~~Suíte `evals/` com 40 casos de retrieval, 8 fora de escopo e 21 de
      escolha de ferramenta~~
@@ -199,13 +199,13 @@ agora é validar o fluxo de produto.
 - 11 ferramentas disponíveis ao modelo: busca de produto, base de
   conhecimento, categorias, estoque, sugestão, comparação,
   criação/consulta/rastreio de pedido, agendamento e 2ª via.
-- Histórico persistido em SQLite — sobrevive a refresh e restart.
+- Histórico persistido em SQLite, sobrevive a refresh e restart.
 - Catálogo, pedidos, estoque, rastreio, agendamento e 2ª via são **dados
   mockados**, pensados pra simular as integrações reais que um produto
   como esse teria no Magalu.
 - A busca exposta ao modelo devolve no máximo 10 produtos por vez (com o
   total encontrado), pra não estourar o contexto com 113 itens.
-- Ainda não há autenticação nem multi-usuário — é single-user, uso local.
+- Ainda não há autenticação nem multi-usuário, é single-user, uso local.
 
 ### Por que cada documento tem uma lista de perguntas
 
@@ -213,14 +213,14 @@ O corpo dos documentos é escrito em vocabulário de especificação ("air
 fryer", "voltagem", "switch azul"), mas o cliente descreve sintoma e usa
 sinônimo ("fritadeira", "tomada diferente", "barulho quando digito"). Sem
 uma ponte entre os dois, a busca erra justamente nas perguntas mais
-naturais — o acerto@1 era de 75%.
+naturais, o acerto@1 era de 75%.
 
 Cada documento passou a declarar as perguntas que responde, e elas entram
 no texto indexado junto do corpo. O acerto@1 subiu pra 94,2% e o acerto@3
 pra 100%.
 
 Pra garantir que isso é generalização e não memorização, as perguntas
-indexadas não podem ser cópia dos casos de avaliação — há teste em
+indexadas não podem ser cópia dos casos de avaliação, há teste em
 `tests/test_rag.py` que falha se alguma passar de 50% de sobreposição de
 termos de conteúdo. Doze casos do conjunto foram escritos depois do
 enriquecimento, justamente pra medir pergunta inédita.
@@ -239,20 +239,20 @@ O RAG combina embedding com BM25, mas eles não fazem a mesma coisa:
   ("quantos BTU pra um escritório de 25 metros?") é o contrário (0,88 e
   2,8). Exigir os dois barrava as duas famílias.
 
-Com isso a cobertura do domínio vai a 52/52 mantendo 7/8 de rejeição —
-antes eram 49/52 e 7/8, ou seja, **3 perguntas legítimas eram respondidas
+Com isso a cobertura do domínio vai a 52/52 mantendo 7/8 de rejeição.
+Antes eram 49/52 e 7/8, ou seja, **3 perguntas legítimas eram respondidas
 com "não tenho essa informação"**. Isso passou muito tempo despercebido
 porque a avaliação media só a rejeição, nunca a cobertura; hoje mede as
 duas, e elas se puxam em direções opostas de propósito.
 
-Nenhum corte é filtro de assunto perfeito — 1 das 8 perguntas fora do
+Nenhum corte é filtro de assunto perfeito, 1 das 8 perguntas fora do
 domínio ainda passa. Quem segura resposta inventada continua sendo a
 persona, que manda a Lu admitir quando a base não cobre.
 
 ## Notas de desenvolvimento
 
 - O venv roda **Python 3.9**, então anotações com `X | None` não funcionam
-  em runtime — use `Optional[...]`.
+  em runtime, use `Optional[...]`.
 - **`numpy<2` é obrigatório**: o torch disponível pra Python 3.9 (2.2.x) foi
   compilado contra NumPy 1.x e quebra com NumPy 2 ("Numpy is not
   available").

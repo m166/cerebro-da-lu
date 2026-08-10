@@ -5,7 +5,7 @@
 
 Cada sinal tem um papel, e eles não são intercambiáveis:
 
-- **Ordenar é com o embedding.** Ele entende sinônimo e paráfrase — é o
+- **Ordenar é com o embedding.** Ele entende sinônimo e paráfrase, é o
   que liga "minhas costas doem" a "cadeira ergonômica".
 - **Filtrar é com o BM25.** O cosseno do E5 vive numa faixa estreita e
   alta, e pergunta fora do domínio chega a 0.86; o BM25 quase zera quando
@@ -13,7 +13,7 @@ Cada sinal tem um papel, e eles não são intercambiáveis:
 
 A ordenação foi medida: semântica pura acerta 94,2% em 1º lugar contra
 92,3% da fusão por posto recíproco (RRF) e 88,5% do BM25 sozinho. Por isso
-o ranking é semântico e o BM25 entra só como porta de relevância —
+o ranking é semântico e o BM25 entra só como porta de relevância.
 `score_fusao` continua exposto pra quem quiser reavaliar isso com outro
 corpus, mas não é o que ordena.
 
@@ -87,7 +87,7 @@ def buscar(pergunta: str, k: int = 3, categoria: str = "") -> List[dict]:
     """Busca híbrida: devolve os k documentos mais próximos da pergunta.
 
     Cada resultado carrega `score` (similaridade de cosseno) e
-    `score_lexical` (BM25). Quem chama decide o que fazer com eles — o
+    `score_lexical` (BM25). Quem chama decide o que fazer com eles, o
     corte por relevância mora no service.
     """
     if not pergunta.strip():

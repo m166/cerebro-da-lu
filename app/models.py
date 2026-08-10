@@ -41,12 +41,12 @@ ETAPAS_RASTREIO = [
 ]
 
 LOCALIZACOES_MOCK = {
-    "confirmado": "Centro de distribuição — Louveira/SP",
-    "em separação": "Centro de distribuição — Louveira/SP",
-    "enviado": "Centro de triagem — em trânsito",
+    "confirmado": "Centro de distribuição, Louveira/SP",
+    "em separação": "Centro de distribuição, Louveira/SP",
+    "enviado": "Centro de triagem, em trânsito",
     "saiu para entrega": "Unidade de entrega local",
     "entregue": "Endereço do cliente",
-    "entrega agendada": "Centro de distribuição — Louveira/SP",
+    "entrega agendada": "Centro de distribuição, Louveira/SP",
 }
 
 CRITERIOS_SUGESTAO = (

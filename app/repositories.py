@@ -1,7 +1,7 @@
 """Camada de acesso a dados.
 
 Mensagens e pedidos vêm do SQLite; o catálogo vem do mock em
-`app/data/catalogo.py`. Nenhuma regra de negócio mora aqui — só leitura e
+`app/data/catalogo.py`. Nenhuma regra de negócio mora aqui, só leitura e
 escrita.
 """
 
@@ -60,7 +60,7 @@ def obter_pedido(pedido_id: int) -> Optional[dict]:
 
 
 def listar_pedidos() -> List[dict]:
-    """Mais recentes primeiro — é a ordem em que o cliente quer ver."""
+    """Mais recentes primeiro, é a ordem em que o cliente quer ver."""
     conn = get_connection()
     rows = conn.execute("SELECT * FROM pedidos ORDER BY id DESC").fetchall()
     conn.close()
@@ -95,7 +95,7 @@ def listar_produtos(query: str = "", categoria: str = "", limite: Optional[int] 
 
     Compara sem acento e, quando nenhum produto casa com a frase inteira,
     cai pra casamento parcial ordenado por quantidade de termos. Exigir a
-    frase completa deixava a busca quebradiça — "fone cancelamento ruido"
+    frase completa deixava a busca quebradiça, "fone cancelamento ruido"
     voltava vazio por causa do acento, e "de ativo" a mais zerava o
     resultado. Devolver vazio faz o modelo gastar rodadas de tool calling
     reformulando a pergunta, e às vezes estourar o limite.

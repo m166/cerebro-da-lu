@@ -22,7 +22,7 @@ STATIC_DIR = BASE_DIR / "static"
 # meio estourava o limite e derrubava a resposta.
 MAX_TOOL_ITERATIONS = 6
 
-# Quantos produtos a busca devolve pro modelo por padrão — o catálogo tem
+# Quantos produtos a busca devolve pro modelo por padrão, o catálogo tem
 # mais de 100 itens e mandar todos estouraria o contexto sem necessidade.
 LIMITE_BUSCA_TOOL = 10
 
@@ -41,7 +41,7 @@ PREFIXO_DOCUMENTO = "passage: "
 LIMITE_CONHECIMENTO = 3
 
 # Pisos de relevância. Um trecho é aceito quando passa em QUALQUER um dos
-# dois — é OU, não E.
+# dois, é OU, não E.
 #
 # O motivo é que os sinais falham em casos opostos. Pergunta que descreve
 # sintoma ("pego ônibus lotado e queria abafar o barulho") tem cosseno

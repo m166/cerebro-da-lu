@@ -3,7 +3,7 @@
 São dados, não testes: ficam separados do `tests/` porque rodam contra o
 modelo de embedding real e contra a Groq, o que custa tempo e tokens.
 
-As perguntas são escritas como um cliente falaria — com gíria, erro de
+As perguntas são escritas como um cliente falaria, com gíria, erro de
 acento e contexto implícito. Perguntar usando as palavras do título do
 documento mediria o óbvio e daria uma métrica inflada.
 """

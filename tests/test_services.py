@@ -43,7 +43,7 @@ def test_sugerir_melhor_avaliacao():
 
 def test_custo_beneficio_pesa_avaliacao_e_prazo_alem_do_preco():
     """Em celulares o mais barato é o Basic Go (3.7 estrelas, 7 dias), mas o
-    custo-benefício prefere o Nova 5G — melhor avaliado e entrega em 2 dias."""
+    custo-benefício prefere o Nova 5G, melhor avaliado e entrega em 2 dias."""
     barato = services.sugerir_produto(categoria="celulares", criterio="melhor_preco")
     equilibrado = services.sugerir_produto(categoria="celulares", criterio="melhor_custo_beneficio")
     assert barato["produto"]["nome"] == "Smartphone Basic Go"

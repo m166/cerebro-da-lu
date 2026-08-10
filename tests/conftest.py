@@ -23,7 +23,7 @@ def banco_isolado(tmp_path, monkeypatch):
 def _encoder_falso(textos):
     """Encoder determinístico de saco de palavras.
 
-    Não é semântico — casa por sobreposição de termos —, mas é o bastante
+    Não é semântico, casa por sobreposição de termos, mas é o bastante
     pra exercitar índice, ranking, corte por score e filtro de categoria
     sem baixar o modelo de verdade.
     """
@@ -64,7 +64,7 @@ def titulo_de_doc(trecho_do_titulo: str) -> dict:
 
 @pytest.fixture
 def groq_falso(monkeypatch):
-    """Substitui o client da Groq — nenhum teste deve chamar a API de verdade.
+    """Substitui o client da Groq, nenhum teste deve chamar a API de verdade.
 
     Devolve uma função que recebe as respostas que o modelo deve dar, em
     ordem (uma por rodada de tool calling).
@@ -103,6 +103,6 @@ def tool_call_falso(nome, argumentos, call_id="call_1"):
 
 
 def id_por_nome(nome: str) -> int:
-    """Resolve o ID de um produto pelo nome — evita testes acoplados a IDs
+    """Resolve o ID de um produto pelo nome, evita testes acoplados a IDs
     fixos, que mudariam ao inserir produtos no catálogo."""
     return next(p["id"] for p in repositories.listar_produtos() if p["nome"] == nome)
