@@ -18,6 +18,19 @@ def test_historico_comeca_vazio():
     assert repositories.listar_mensagens() == []
 
 
+def test_banco_apagado_com_app_no_ar_se_recupera():
+    """Sem isso, apagar o arquivo deixa toda consulta falhando com
+    "no such table" até alguém reiniciar o processo."""
+    from app import config
+
+    repositories.inserir_mensagem("user", "antes")
+    config.DB_PATH.unlink()
+
+    assert repositories.listar_mensagens() == []
+    repositories.inserir_mensagem("user", "depois")
+    assert repositories.listar_mensagens() == [{"role": "user", "content": "depois"}]
+
+
 # --- Pedidos -------------------------------------------------------------
 
 def test_inserir_e_obter_pedido():
