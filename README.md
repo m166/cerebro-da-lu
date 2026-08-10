@@ -267,6 +267,17 @@ derivada, ela pode recuar sem que o pedido tenha andado (a escala de
 aumenta no catálogo). Nesse caso a Lu fica calada, em vez de anunciar
 "confirmado" num pedido que ela já deu como entregue.
 
+### Por que existe cadastro separado da conversa
+
+A Lu perguntava o endereço de novo a quem já tinha informado. A causa era a
+janela de histórico: o dado estava no banco, mas fora das mensagens
+enviadas ao modelo.
+
+Nome e endereço passaram a viver numa tabela `perfil` e entram no system
+prompt, então continuam visíveis por quantas mensagens a conversa tiver,
+por poucos tokens. A regra é essa: dado que se repete em todo pedido é
+cadastro, o resto é conversa.
+
 ### Limite de tokens da Groq
 
 A conta free trabalha com 8000 tokens por minuto. Cada requisição de chat

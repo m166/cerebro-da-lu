@@ -29,6 +29,13 @@ class ComparacaoInvalida(ErroDeDominio):
         super().__init__("Preciso de pelo menos 2 produtos válidos pra comparar.")
 
 
+class CampoDePerfilInvalido(ErroDeDominio):
+    def __init__(self, campo: str, aceitos):
+        super().__init__(
+            f"Não sei guardar '{campo}'. Campos aceitos: {', '.join(aceitos)}."
+        )
+
+
 class SemProdutosDisponiveis(ErroDeDominio):
     def __init__(self):
         super().__init__("Nenhum produto disponível pra esses critérios.")

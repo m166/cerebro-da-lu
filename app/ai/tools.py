@@ -90,6 +90,30 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "salvar_dado_do_cliente",
+            "description": (
+                "Guarda no cadastro um dado que o cliente contou, pra não precisar "
+                "perguntar de novo depois. Use quando ele disser o nome ou informar "
+                "um endereço de entrega novo. O que já está cadastrado aparece no "
+                "começo desta conversa, então não chame isto pra consultar."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "campo": {
+                        "type": "string",
+                        "enum": list(models.CAMPOS_PERFIL),
+                        "description": "Qual dado guardar.",
+                    },
+                    "valor": {"type": "string", "description": "O valor informado pelo cliente."},
+                },
+                "required": ["campo", "valor"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "consultar_estoque",
             "description": "Consulta se um produto tem estoque disponível.",
             "parameters": {
@@ -240,6 +264,7 @@ def _buscar_produtos(query: str = "", categoria: str = "", limite: int = config.
 DISPATCH = {
     "buscar_produtos": _buscar_produtos,
     "buscar_conhecimento": services.buscar_conhecimento,
+    "salvar_dado_do_cliente": services.salvar_dado_do_cliente,
     "listar_categorias": lambda: {"categorias": services.listar_categorias()},
     "consultar_estoque": services.consultar_estoque,
     "sugerir_produto": services.sugerir_produto,

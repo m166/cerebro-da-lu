@@ -133,6 +133,32 @@ def comparar_produtos(categoria: str = "", produto_ids: Optional[List[int]] = No
     }
 
 
+# --- Cadastro do cliente ---------------------------------------------------
+
+def dados_do_cliente() -> dict:
+    """O que a Lu já sabe sobre quem está conversando.
+
+    O endereço cai pro último pedido quando ainda não foi cadastrado, pra
+    que quem já comprou antes desta funcionalidade não precise repetir.
+    """
+    perfil = repositories.obter_perfil()
+    if not perfil.get("endereco"):
+        ultimo = repositories.endereco_do_ultimo_pedido()
+        if ultimo:
+            perfil["endereco"] = ultimo
+    return {campo: perfil.get(campo) for campo in models.CAMPOS_PERFIL if perfil.get(campo)}
+
+
+def salvar_dado_do_cliente(campo: str, valor: str) -> dict:
+    if campo not in models.CAMPOS_PERFIL:
+        raise exceptions.CampoDePerfilInvalido(campo, models.CAMPOS_PERFIL)
+    if not valor or not valor.strip():
+        raise exceptions.CampoDePerfilInvalido(campo, models.CAMPOS_PERFIL)
+
+    repositories.salvar_perfil(campo, valor.strip())
+    return dados_do_cliente()
+
+
 # --- Rastreio: código e progressão de status ------------------------------
 
 def _digito_verificador(serie: str) -> int:
@@ -228,6 +254,13 @@ def criar_pedido(produto_id: int, quantidade: int = 1, endereco_entrega: str = "
     produto = obter_produto(produto_id)
     if produto["estoque"] < quantidade:
         raise exceptions.EstoqueInsuficiente(produto["nome"], produto["estoque"])
+
+    # Endereço informado vira cadastro; endereço omitido usa o cadastrado.
+    # É o que evita perguntar de novo a quem já respondeu uma vez.
+    if endereco_entrega and endereco_entrega.strip():
+        repositories.salvar_perfil("endereco", endereco_entrega.strip())
+    else:
+        endereco_entrega = dados_do_cliente().get("endereco", "")
 
     valor_total = round(produto["preco"] * quantidade, 2)
     pedido = repositories.inserir_pedido(

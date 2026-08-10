@@ -48,6 +48,44 @@ def listar_mensagens(limite: Optional[int] = None) -> List[dict]:
     ]
 
 
+# --- Perfil do cliente ----------------------------------------------------
+
+def salvar_perfil(chave: str, valor: str) -> None:
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO perfil (chave, valor, atualizado_em)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor,
+                                         atualizado_em = CURRENT_TIMESTAMP
+        """,
+        (chave, valor),
+    )
+    conn.commit()
+    conn.close()
+
+
+def obter_perfil() -> dict:
+    conn = get_connection()
+    rows = conn.execute("SELECT chave, valor FROM perfil").fetchall()
+    conn.close()
+    return {row["chave"]: row["valor"] for row in rows}
+
+
+def endereco_do_ultimo_pedido() -> Optional[str]:
+    """Serve de padrão pra quem já comprou antes de existir o cadastro."""
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT endereco_entrega FROM pedidos
+        WHERE endereco_entrega IS NOT NULL AND endereco_entrega != ''
+        ORDER BY id DESC LIMIT 1
+        """
+    ).fetchone()
+    conn.close()
+    return row["endereco_entrega"] if row else None
+
+
 # --- Pedidos -------------------------------------------------------------
 
 def inserir_pedido(

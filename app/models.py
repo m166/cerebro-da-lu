@@ -37,7 +37,21 @@ CREATE TABLE IF NOT EXISTS pedidos (
 )
 """
 
-TABELAS = (CREATE_MESSAGES, CREATE_PEDIDOS)
+# Cadastro do cliente. Nome e endereço não podem depender do rolar da
+# conversa: a janela de histórico enviada ao modelo é limitada, então o que
+# ficou pra trás some. Dado que se repete em todo pedido é cadastro, não
+# mensagem.
+CREATE_PERFIL = """
+CREATE TABLE IF NOT EXISTS perfil (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+TABELAS = (CREATE_MESSAGES, CREATE_PEDIDOS, CREATE_PERFIL)
+
+CAMPOS_PERFIL = ("nome", "endereco")
 
 # Colunas acrescentadas depois que a tabela já existia. `CREATE TABLE IF NOT
 # EXISTS` não altera tabela criada por uma versão anterior, então quem abre

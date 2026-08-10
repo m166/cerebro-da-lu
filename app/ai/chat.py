@@ -30,10 +30,35 @@ def _segundos_para_tentar(mensagem: str) -> Optional[int]:
     return math.ceil(float(achado.group(1))) if achado else None
 
 
+def _instrucoes() -> str:
+    """Persona somada ao que já se sabe do cliente.
+
+    O cadastro entra no system prompt, e não no histórico, porque o
+    histórico enviado ao modelo é uma janela: o endereço dado há vinte
+    mensagens sairia de vista e a Lu perguntaria de novo. Aqui ele está
+    sempre presente, por poucos tokens.
+    """
+    from app import services
+
+    dados = services.dados_do_cliente()
+    if not dados:
+        return config.persona()
+
+    conhecidos = "\n".join(f"- {campo}: {valor}" for campo, valor in dados.items())
+    return (
+        f"{config.persona()}\n\n"
+        "## O que você já sabe deste cliente\n\n"
+        f"{conhecidos}\n\n"
+        "Use esses dados em vez de perguntar de novo. Se for usar o endereço "
+        "num pedido, confirme numa frase ao invés de pedir do zero, e só peça "
+        "de novo se ele disser que mudou."
+    )
+
+
 def responder(mensagem_do_usuario: str) -> str:
     repositories.inserir_mensagem("user", mensagem_do_usuario)
 
-    conversa: List[dict] = [{"role": "system", "content": config.persona()}]
+    conversa: List[dict] = [{"role": "system", "content": _instrucoes()}]
     # Só role e content vão pro modelo. `tipo` é informação nossa, de tela, e
     # a API rejeita campo que ela não conhece dentro da mensagem.
     conversa.extend(

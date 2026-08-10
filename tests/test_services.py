@@ -557,3 +557,42 @@ def test_reserva_do_aviso_e_de_quem_chega_primeiro():
     assert repositories.marcar_status_notificado(pedido["id"], "enviado") is True
     assert repositories.marcar_status_notificado(pedido["id"], "enviado") is False
     assert repositories.marcar_status_notificado(pedido["id"], "entregue") is True
+
+
+# --- Cadastro do cliente ---------------------------------------------------
+
+def test_endereco_do_pedido_vira_cadastro():
+    """Quem informou o endereço uma vez não pode ser perguntado de novo."""
+    services.criar_pedido(id_por_nome("Smartphone Nova 5G"), endereco_entrega="Rua A, 1")
+    assert services.dados_do_cliente()["endereco"] == "Rua A, 1"
+
+
+def test_pedido_sem_endereco_usa_o_cadastrado():
+    services.criar_pedido(id_por_nome("Smartphone Nova 5G"), endereco_entrega="Rua A, 1")
+    segundo = services.criar_pedido(id_por_nome("Mouse Gamer 16000 DPI"))
+    assert segundo["endereco_entrega"] == "Rua A, 1"
+
+
+def test_endereco_novo_substitui_o_antigo():
+    services.criar_pedido(id_por_nome("Smartphone Nova 5G"), endereco_entrega="Rua A, 1")
+    services.criar_pedido(id_por_nome("Mouse Gamer 16000 DPI"), endereco_entrega="Rua B, 2")
+    assert services.dados_do_cliente()["endereco"] == "Rua B, 2"
+
+
+def test_cadastro_vazio_nao_inventa_campo():
+    assert services.dados_do_cliente() == {}
+
+
+def test_salvar_e_ler_nome():
+    services.salvar_dado_do_cliente("nome", "  Matheus  ")
+    assert services.dados_do_cliente()["nome"] == "Matheus"
+
+
+def test_campo_desconhecido_e_recusado():
+    with pytest.raises(exceptions.CampoDePerfilInvalido):
+        services.salvar_dado_do_cliente("cpf", "123")
+
+
+def test_valor_vazio_e_recusado():
+    with pytest.raises(exceptions.CampoDePerfilInvalido):
+        services.salvar_dado_do_cliente("nome", "   ")

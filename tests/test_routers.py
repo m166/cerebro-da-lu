@@ -401,3 +401,26 @@ def test_resposta_normal_da_lu_e_do_tipo_chat(groq_falso):
     # Texto que imita o formato do aviso, mas é resposta de verdade: com o
     # regex antigo isso viraria bolha de notificação.
     assert all(m["tipo"] == "chat" for m in historico)
+
+
+def test_cadastro_entra_no_prompt_e_sobrevive_a_janela(groq_falso, monkeypatch):
+    """O endereço saía de vista quando passava da janela de histórico, e a Lu
+    perguntava de novo. Agora ele vai no system prompt, não no histórico."""
+    from app import config, repositories
+
+    monkeypatch.setattr(config, "MAX_MENSAGENS_CONTEXTO", 2)
+    client.post(
+        "/api/pedidos",
+        json={"produto_id": id_por_nome("Smartphone Nova 5G"), "endereco_entrega": "Rua A, 1"},
+    )
+    for i in range(10):
+        repositories.inserir_mensagem("user", f"conversa {i}")
+
+    fake = groq_falso(resposta_do_modelo(content="ok"))
+    client.post("/api/chat", json={"content": "quero comprar de novo"})
+
+    enviadas = fake.chat.completions.create.call_args.kwargs["messages"]
+    system = enviadas[0]["content"]
+    assert enviadas[0]["role"] == "system"
+    assert "Rua A, 1" in system
+    assert not any("Rua A, 1" in m["content"] for m in enviadas[1:])

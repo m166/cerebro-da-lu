@@ -175,6 +175,22 @@ Regras da avaliação:
   de mexer no sistema, já aconteceu de o caso pedir tool onde a persona
   manda perguntar primeiro.
 
+## Cadastro do cliente x histórico de conversa
+
+Nome e endereço ficam na tabela `perfil`, não na conversa, e entram no
+**system prompt** por `ai/chat._instrucoes()`. O motivo é concreto: o
+histórico enviado ao modelo é uma janela
+(`MAX_MENSAGENS_CONTEXTO`), então o endereço informado vinte mensagens
+atrás sai de vista e a Lu pergunta de novo. Já aconteceu.
+
+A regra pra decidir onde guardar: **dado que se repete em todo pedido é
+cadastro; o resto é conversa.** Ao acrescentar um campo, coloque em
+`models.CAMPOS_PERFIL`, senão `salvar_dado_do_cliente` recusa.
+
+`criar_pedido` grava o endereço informado e usa o cadastrado quando vem
+vazio. Pra quem já comprou antes de existir a tabela, `dados_do_cliente`
+cai no endereço do último pedido.
+
 ## Status do pedido é derivado, não guardado
 
 O pedido percorre sozinho as cinco etapas de `models.ETAPAS_RASTREIO`, e
