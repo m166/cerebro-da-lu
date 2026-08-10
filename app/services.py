@@ -152,6 +152,10 @@ def obter_pedido(pedido_id: int) -> dict:
     return pedido
 
 
+def listar_pedidos() -> List[dict]:
+    return repositories.listar_pedidos()
+
+
 def rastrear_pedido(pedido_id: int) -> dict:
     pedido = obter_pedido(pedido_id)
     etapa_atual = pedido["status"]

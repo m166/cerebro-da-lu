@@ -103,6 +103,8 @@ real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
 - **Rastreio de pedido** — onde está, etapa atual.
 - **Catálogo navegável** — painel com filtro por categoria e busca, onde o
   cliente explora e pede direto, além de conversar pelo chat.
+- **Painel de pedidos** — lista os pedidos e permite rastrear, agendar
+  entrega e gerar 2ª via de boleto/NF sem passar pelo chat.
 
 ## Arquitetura
 
@@ -149,6 +151,7 @@ agora é validar o fluxo de produto.
 | GET | `/api/produtos/sugestao` | melhor produto (`categoria`, `criterio`) |
 | POST | `/api/produtos/comparacao` | compara por categoria ou por IDs |
 | POST | `/api/pedidos` | cria pedido |
+| GET | `/api/pedidos` | lista pedidos (mais recentes primeiro) |
 | GET | `/api/pedidos/{id}` | consulta pedido |
 | GET | `/api/pedidos/{id}/rastreio` | rastreia pedido |
 | POST | `/api/pedidos/{id}/agendar-entrega` | agenda entrega |

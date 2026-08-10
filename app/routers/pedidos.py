@@ -1,10 +1,17 @@
 """Endpoints de pedidos: criação, consulta, rastreio, agendamento e 2ª via."""
 
+from typing import List
+
 from fastapi import APIRouter, HTTPException
 
 from app import exceptions, schemas, services
 
 router = APIRouter(prefix="/api/pedidos", tags=["pedidos"])
+
+
+@router.get("", response_model=List[schemas.PedidoOut])
+def listar_pedidos():
+    return services.listar_pedidos()
 
 
 @router.post("", response_model=schemas.PedidoOut)

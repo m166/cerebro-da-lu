@@ -74,6 +74,12 @@ services, então quem orquestra o modelo fica acima de ambos).
   (ex: por que a normalização do score é relativa aos candidatos).
 - Sem framework de frontend — mudanças de UI são HTML/CSS/JS direto em
   `static/`.
+- No frontend, nunca monte HTML por concatenação com dado vindo da API —
+  use `textContent` e `createElement` (é o padrão já seguido em
+  `script.js`).
+- **Não formate data com `new Date(...)` no frontend.** Uma string como
+  `"2026-09-15"` é lida como UTC e, no fuso do Brasil, exibida um dia
+  antes. Use `formatarData()`, que reformata a string.
 - SQLite é suficiente enquanto for single-user/local. Não introduza
   Postgres ou ORM sem necessidade real (por isso `models.py` guarda DDL,
   não classes de ORM).
@@ -104,6 +110,24 @@ Atenção: o entrypoint é `app.main:app` (não `main:app`).
   Como ele é léxico e não semântico, **não escreva teste afirmando que a
   pergunta X traz o documento Y** — isso mede o encoder falso, não o
   sistema. Qualidade semântica se verifica manualmente, com o modelo real.
+
+## Validando a UI sem driver de browser
+
+Não há playwright nem node no ambiente, mas o Chrome instalado tira
+screenshot em headless — e **olhar a tela pega o que teste de API não
+pega** (foi assim que apareceu uma data de entrega exibida um dia antes).
+
+```bash
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$CHROME" --headless=new --disable-gpu --hide-scrollbars \
+  --window-size=980,900 --screenshot=/tmp/lu.png \
+  --virtual-time-budget=6000 "http://localhost:8000/#catalogo"
+```
+
+Headless não clica, então os painéis são alcançados pela URL:
+`#catalogo` e `#pedidos` abrem o painel correspondente no carregamento.
+Pra conferir o tema claro, acrescente
+`--blink-settings=preferredColorScheme=1`.
 
 ## Testes x avaliação
 

@@ -123,6 +123,18 @@ def test_fluxo_completo_do_pedido():
     assert nf.json()["tipo"] == "nota_fiscal"
 
 
+def test_listar_pedidos_comeca_vazio():
+    assert client.get("/api/pedidos").json() == []
+
+
+def test_listar_pedidos_mais_recente_primeiro():
+    primeiro = client.post("/api/pedidos", json={"produto_id": id_por_nome("Smartphone Nova 5G")})
+    segundo = client.post("/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")})
+
+    listados = client.get("/api/pedidos").json()
+    assert [p["id"] for p in listados] == [segundo.json()["id"], primeiro.json()["id"]]
+
+
 def test_criar_pedido_estoque_insuficiente():
     produto_id = id_por_nome("Geladeira French Door 540L")
     resposta = client.post("/api/pedidos", json={"produto_id": produto_id, "quantidade": 999})

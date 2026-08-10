@@ -117,6 +117,16 @@ def test_criar_pedido_estoque_insuficiente_levanta():
         services.criar_pedido(produto_id, quantidade=100)
 
 
+def test_listar_pedidos_vazio():
+    assert services.listar_pedidos() == []
+
+
+def test_listar_pedidos_traz_todos():
+    services.criar_pedido(id_por_nome("Smartphone Nova 5G"))
+    services.criar_pedido(id_por_nome("Mouse Gamer 16000 DPI"))
+    assert len(services.listar_pedidos()) == 2
+
+
 def test_rastrear_pedido():
     pedido = services.criar_pedido(id_por_nome("Smartphone Nova 5G"))
     rastreio = services.rastrear_pedido(pedido["id"])

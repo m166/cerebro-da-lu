@@ -58,6 +58,14 @@ def obter_pedido(pedido_id: int) -> Optional[dict]:
     return dict(row) if row else None
 
 
+def listar_pedidos() -> List[dict]:
+    """Mais recentes primeiro — é a ordem em que o cliente quer ver."""
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM pedidos ORDER BY id DESC").fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def atualizar_entrega_agendada(pedido_id: int, data_entrega: str) -> Optional[dict]:
     conn = get_connection()
     conn.execute(
