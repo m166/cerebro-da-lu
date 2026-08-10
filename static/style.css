@@ -10,6 +10,11 @@
   --assistant-text: #1a1a1a;
   --error-bubble: #fee2e2;
   --error-text: #991b1b;
+  --aviso-bubble: #e8effd;
+  --aviso-text: #1e3a8a;
+  --aviso-borda: #93b4f7;
+  --acento-suave: rgba(37, 99, 235, 0.22);
+  --trilho: rgba(128, 128, 128, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +27,11 @@
     --assistant-text: #e6e6e6;
     --error-bubble: #3b1414;
     --error-text: #fca5a5;
+    --aviso-bubble: #16233d;
+    --aviso-text: #c3d8ff;
+    --aviso-borda: #35558f;
+    --acento-suave: rgba(96, 165, 250, 0.3);
+    --trilho: rgba(160, 160, 160, 0.28);
   }
 }
 
@@ -185,6 +195,120 @@ body {
   letter-spacing: 0.02em;
 }
 
+.rastreio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rastreio-rotulo {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rastreio-codigo {
+  padding: 0.15rem 0.4rem;
+  border: 1px dashed var(--aviso-borda);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  /* Se a cópia automática for bloqueada pelo navegador, um duplo clique
+     ainda seleciona o código inteiro. */
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+.rastreio-codigo:hover {
+  border-style: solid;
+  background: var(--aviso-bubble);
+  color: var(--aviso-text);
+}
+
+.rastreio-copiado {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.rastreio-copiado[hidden] {
+  display: none;
+}
+
+.etapas {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0 0.35rem;
+}
+
+.etapa {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.etapa:first-child {
+  flex: 0 0 auto;
+}
+
+.etapa::before {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--trilho);
+}
+
+.etapa:first-child::before {
+  display: none;
+}
+
+.etapa.feita::before,
+.etapa.atual::before {
+  background: var(--user-bubble);
+}
+
+.etapa-marca {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--trilho);
+}
+
+.etapa.feita .etapa-marca {
+  background: var(--user-bubble);
+}
+
+.etapa.atual .etapa-marca {
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--user-bubble);
+  box-shadow: 0 0 0 0.22rem var(--acento-suave);
+}
+
+/* O nome da etapa fica só para leitor de tela: no card cabem os cinco
+   pontos, mas não os cinco rótulos. A etapa atual aparece na legenda. */
+.etapa-nome {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.etapas-legenda {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .card-acoes {
   display: flex;
   flex-wrap: wrap;
@@ -260,6 +384,44 @@ body {
   background: var(--error-bubble);
   color: var(--error-text);
   font-size: 0.9rem;
+}
+
+/* Aviso do sistema, não resposta da Lu: ocupa a linha inteira, tem rótulo
+   próprio e barra lateral, pra não se confundir com a bolha de conversa. */
+.bubble.notificacao {
+  align-self: stretch;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--aviso-borda);
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  background: var(--aviso-bubble);
+  color: var(--aviso-text);
+  font-size: 0.85rem;
+}
+
+.notificacao-rotulo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.conexao-aviso {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  background: var(--error-bubble);
+  color: var(--error-text);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.conexao-aviso[hidden] {
+  display: none;
 }
 
 .digitando {

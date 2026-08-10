@@ -15,9 +15,12 @@ from app.database import get_connection
 
 # --- Mensagens ---------------------------------------------------------
 
-def inserir_mensagem(role: str, content: str) -> None:
+def inserir_mensagem(role: str, content: str, tipo: str = models.TIPO_CHAT) -> None:
     conn = get_connection()
-    conn.execute("INSERT INTO messages (role, content) VALUES (?, ?)", (role, content))
+    conn.execute(
+        "INSERT INTO messages (role, content, tipo) VALUES (?, ?, ?)",
+        (role, content, tipo),
+    )
     conn.commit()
     conn.close()
 
@@ -28,16 +31,21 @@ def listar_mensagens(limite: Optional[int] = None) -> List[dict]:
     if limite:
         rows = conn.execute(
             """
-            SELECT role, content FROM (
-                SELECT id, role, content FROM messages ORDER BY id DESC LIMIT ?
+            SELECT role, content, tipo FROM (
+                SELECT id, role, content, tipo FROM messages ORDER BY id DESC LIMIT ?
             ) ORDER BY id
             """,
             (limite,),
         ).fetchall()
     else:
-        rows = conn.execute("SELECT role, content FROM messages ORDER BY id").fetchall()
+        rows = conn.execute(
+            "SELECT role, content, tipo FROM messages ORDER BY id"
+        ).fetchall()
     conn.close()
-    return [{"role": row["role"], "content": row["content"]} for row in rows]
+    return [
+        {"role": row["role"], "content": row["content"], "tipo": row["tipo"]}
+        for row in rows
+    ]
 
 
 # --- Pedidos -------------------------------------------------------------
@@ -52,10 +60,23 @@ def inserir_pedido(
     conn = get_connection()
     cursor = conn.execute(
         """
-        INSERT INTO pedidos (produto_id, produto_nome, quantidade, valor_total, endereco_entrega, status)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO pedidos (
+            produto_id, produto_nome, quantidade, valor_total, endereco_entrega,
+            status, status_notificado
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (produto_id, produto_nome, quantidade, valor_total, endereco_entrega, models.STATUS_INICIAL),
+        (
+            produto_id,
+            produto_nome,
+            quantidade,
+            valor_total,
+            endereco_entrega,
+            models.STATUS_INICIAL,
+            # Nasce com o status inicial já dado como comunicado: quem criou o
+            # pedido acabou de ver a confirmação, notificar de novo seria eco.
+            models.STATUS_INICIAL,
+        ),
     )
     conn.commit()
     pedido_id = cursor.lastrowid
@@ -79,14 +100,50 @@ def listar_pedidos() -> List[dict]:
 
 
 def atualizar_entrega_agendada(pedido_id: int, data_entrega: str) -> Optional[dict]:
+    """Agendar não mexe no status: são eixos diferentes (data combinada com o
+    cliente x onde o pedido está na logística)."""
     conn = get_connection()
     conn.execute(
-        "UPDATE pedidos SET data_entrega_agendada = ?, status = ? WHERE id = ?",
-        (data_entrega, models.STATUS_AGENDADO, pedido_id),
+        "UPDATE pedidos SET data_entrega_agendada = ? WHERE id = ?",
+        (data_entrega, pedido_id),
     )
     conn.commit()
     conn.close()
     return obter_pedido(pedido_id)
+
+
+def definir_codigo_rastreio(pedido_id: int, codigo: str) -> Optional[dict]:
+    conn = get_connection()
+    conn.execute("UPDATE pedidos SET codigo_rastreio = ? WHERE id = ?", (codigo, pedido_id))
+    conn.commit()
+    conn.close()
+    return obter_pedido(pedido_id)
+
+
+def marcar_status_notificado(pedido_id: int, status: str) -> bool:
+    """Tenta reservar o direito de avisar este status. Devolve se conseguiu.
+
+    O UPDATE só acerta a linha se ela ainda não estiver marcada com este
+    status, e é o próprio banco que decide quem chegou primeiro. Sem essa
+    condição, duas abas fazendo poll ao mesmo tempo liam o mesmo estado
+    antigo e gravavam duas vezes a mesma mensagem no histórico.
+
+    Grava também em `status`, pra que a coluna reflita a última etapa
+    observada em vez de ficar parada no valor da criação. Quem manda continua
+    sendo o status derivado do tempo, isto aqui é cache.
+    """
+    conn = get_connection()
+    cursor = conn.execute(
+        """
+        UPDATE pedidos SET status = ?, status_notificado = ?
+        WHERE id = ? AND (status_notificado IS NULL OR status_notificado != ?)
+        """,
+        (status, status, pedido_id, status),
+    )
+    conn.commit()
+    reservou = cursor.rowcount == 1
+    conn.close()
+    return reservou
 
 
 # --- Catálogo -------------------------------------------------------------

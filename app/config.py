@@ -12,7 +12,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
-DB_PATH = BASE_DIR / "cerebro.db"
+# Configurável por env var pra que dá pra subir uma instância de teste sem
+# encostar no banco de quem está usando o app. Já aconteceu de uma demo
+# gravar pedido e aviso no histórico real por não existir essa saída.
+DB_PATH = Path(os.getenv("DB_PATH", BASE_DIR / "cerebro.db"))
 PERSONA_PATH = BASE_DIR / "persona.md"
 STATIC_DIR = BASE_DIR / "static"
 
@@ -33,6 +36,12 @@ LIMITE_BUSCA_TOOL = 8
 # de poucas trocas. Dez mensagens (cinco idas e voltas) preserva o
 # "esse aí" e o "o mais barato" da pergunta anterior.
 MAX_MENSAGENS_CONTEXTO = 10
+
+# Escala de tempo da entrega mockada: quantos segundos reais valem um dia de
+# prazo. O status do pedido é derivado do relógio, então com o padrão de 20
+# um produto de prazo 4 dias percorre as 5 etapas e chega em ~80 segundos, o
+# que cabe numa demo. Coloque 86400 pra simular tempo real.
+SEGUNDOS_POR_DIA_ENTREGA = int(os.getenv("SEGUNDOS_POR_DIA_ENTREGA", "20"))
 
 # RAG: modelo multilíngue treinado pra retrieval. Foi escolhido depois de
 # comparar com paraphrase-multilingual-MiniLM, que acertava 1 de 4 buscas

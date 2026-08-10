@@ -17,6 +17,7 @@ const pedidosPanelEl = document.getElementById("pedidos-panel");
 const pedidosListaEl = document.getElementById("pedidos-lista");
 const pedidosContagemEl = document.getElementById("pedidos-contagem");
 const pedidosAtualizarEl = document.getElementById("pedidos-atualizar");
+const conexaoAvisoEl = document.getElementById("conexao-aviso");
 
 const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -40,16 +41,48 @@ async function pedirJson(url, opcoes) {
 
 // --- Chat -----------------------------------------------------------------
 
+function anexarBolha(bolha, sempreRolar = true) {
+  const acompanhar =
+    sempreRolar ||
+    messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
+  messagesEl.appendChild(bolha);
+  if (acompanhar) messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
 function renderMessage(role, content) {
   const bubble = document.createElement("div");
   bubble.className = `bubble ${role}`;
   bubble.textContent = content;
-  messagesEl.appendChild(bubble);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  anexarBolha(bubble);
 }
 
 function renderError(text) {
   renderMessage("error", text);
+}
+
+// O aviso de status e a resposta da Lu são os dois "assistant", porque os
+// dois foram ditos por ela. Quem separa é o campo `tipo`, que a API manda
+// junto. Antes isso era adivinhado por regex no texto, e mudar a frase no
+// backend fazia o aviso voltar a parecer resposta comum, sem erro nenhum.
+function ehNotificacao(mensagem) {
+  return mensagem.tipo === "notificacao";
+}
+
+function renderNotificacao(content) {
+  const bubble = document.createElement("div");
+  bubble.className = "bubble notificacao";
+
+  const rotulo = document.createElement("span");
+  rotulo.className = "notificacao-rotulo";
+  rotulo.textContent = "Atualização do pedido";
+
+  const texto = document.createElement("span");
+  texto.textContent = content;
+
+  bubble.append(rotulo, texto);
+  // Chega sozinha, sem o usuário ter pedido: só puxa a rolagem se ele já
+  // estiver no fim da conversa, pra não tirar da tela o que ele está lendo.
+  anexarBolha(bubble, false);
 }
 
 function definirCarregando(carregando) {
@@ -91,7 +124,13 @@ formEl.addEventListener("submit", (event) => {
 async function loadHistory() {
   try {
     const history = await pedirJson("/api/history");
-    history.forEach((m) => renderMessage(m.role, m.content));
+    // Redesenha do zero: a notificação que o poll já pôs na tela também está
+    // gravada no histórico, e sem limpar ela apareceria duas vezes.
+    messagesEl.innerHTML = "";
+    history.forEach((m) => {
+      if (ehNotificacao(m)) renderNotificacao(m.content);
+      else renderMessage(m.role, m.content);
+    });
   } catch (err) {
     renderError("Não foi possível carregar o histórico.");
   }
@@ -239,6 +278,112 @@ catalogoToggleEl.addEventListener("click", async () => {
 
 // --- Pedidos ----------------------------------------------------------------
 
+// Espelha models.ETAPAS_RASTREIO. A lista de pedidos devolve só a etapa
+// atual, e buscar /rastreio por card seria uma requisição por pedido.
+const ETAPAS_PEDIDO = [
+  "confirmado",
+  "em separação",
+  "enviado",
+  "saiu para entrega",
+  "entregue",
+];
+
+async function copiarTexto(texto) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch (err) {
+    // Sem permissão de área de transferência: cai na cópia por seleção.
+  }
+  const campo = document.createElement("textarea");
+  campo.value = texto;
+  campo.setAttribute("readonly", "");
+  campo.style.position = "fixed";
+  campo.style.opacity = "0";
+  document.body.appendChild(campo);
+  campo.select();
+  let copiou = false;
+  try {
+    copiou = document.execCommand("copy");
+  } catch (err) {
+    copiou = false;
+  }
+  campo.remove();
+  return copiou;
+}
+
+function criarRastreioCopiavel(codigo) {
+  const linha = document.createElement("p");
+  linha.className = "card-info rastreio";
+
+  const rotulo = document.createElement("span");
+  rotulo.className = "rastreio-rotulo";
+  rotulo.textContent = "Rastreio";
+
+  const confirmacao = document.createElement("span");
+  confirmacao.className = "rastreio-copiado";
+  confirmacao.setAttribute("role", "status");
+  confirmacao.hidden = true;
+
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "rastreio-codigo";
+  botao.textContent = codigo;
+  botao.title = "Clique para copiar";
+  botao.setAttribute("aria-label", `Copiar o código de rastreio ${codigo}`);
+
+  let timeout;
+  botao.addEventListener("click", async () => {
+    const copiou = await copiarTexto(codigo);
+    confirmacao.textContent = copiou ? "copiado" : "copie manualmente";
+    confirmacao.hidden = false;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      confirmacao.hidden = true;
+    }, 2000);
+  });
+
+  linha.append(rotulo, botao, confirmacao);
+  return linha;
+}
+
+function criarLinhaDoTempo(status) {
+  const atual = ETAPAS_PEDIDO.indexOf(status);
+  if (atual < 0) return [];
+
+  const lista = document.createElement("ol");
+  lista.className = "etapas";
+  lista.setAttribute("aria-label", "Progresso do pedido");
+
+  ETAPAS_PEDIDO.forEach((etapa, indice) => {
+    const item = document.createElement("li");
+    item.className = "etapa";
+    if (indice < atual) item.classList.add("feita");
+    if (indice === atual) {
+      item.classList.add("atual");
+      item.setAttribute("aria-current", "step");
+    }
+    item.title = etapa;
+
+    const marca = document.createElement("span");
+    marca.className = "etapa-marca";
+    const nome = document.createElement("span");
+    nome.className = "etapa-nome";
+    nome.textContent = etapa;
+
+    item.append(marca, nome);
+    lista.appendChild(item);
+  });
+
+  const legenda = criarLinha(
+    `Etapa ${atual + 1} de ${ETAPAS_PEDIDO.length}`,
+    "etapas-legenda"
+  );
+  return [lista, legenda];
+}
+
 function criarCardPedido(pedido) {
   const card = document.createElement("div");
   card.className = "card";
@@ -265,6 +410,12 @@ function criarCardPedido(pedido) {
     status.append(` entrega em ${formatarData(pedido.data_entrega_agendada)}`);
   }
   card.appendChild(status);
+
+  if (pedido.codigo_rastreio) {
+    card.appendChild(criarRastreioCopiavel(pedido.codigo_rastreio));
+  }
+
+  criarLinhaDoTempo(pedido.status).forEach((el) => card.appendChild(el));
 
   const detalhe = document.createElement("p");
   detalhe.className = "card-detalhe";
@@ -360,6 +511,68 @@ pedidosToggleEl.addEventListener("click", () => {
   }
 });
 
+// --- Notificações de pedido -------------------------------------------------
+
+const INTERVALO_NOTIFICACOES = 5000;
+const INTERVALO_NOTIFICACOES_MAXIMO = 60000;
+const FALHAS_ATE_AVISAR = 2;
+
+let intervaloNotificacoes = INTERVALO_NOTIFICACOES;
+let timerNotificacoes;
+let consultaEmVoo = false;
+let falhasSeguidas = 0;
+
+// Aba escondida não consulta: o status é derivado do relógio no servidor, então
+// nada se perde enquanto ninguém olha, e a volta pra aba busca o estado atual.
+function agendarNotificacoes(atraso = intervaloNotificacoes) {
+  clearTimeout(timerNotificacoes);
+  if (document.hidden) return;
+  timerNotificacoes = setTimeout(verificarNotificacoes, atraso);
+}
+
+// O status do pedido é derivado do relógio no backend, então é a consulta
+// que descobre que ele andou. As mensagens já vêm salvas no histórico, aqui
+// só entram na tela.
+async function verificarNotificacoes() {
+  if (consultaEmVoo || document.hidden) {
+    agendarNotificacoes();
+    return;
+  }
+  consultaEmVoo = true;
+  try {
+    const { novas } = await pedirJson("/api/notificacoes");
+    falhasSeguidas = 0;
+    intervaloNotificacoes = INTERVALO_NOTIFICACOES;
+    conexaoAvisoEl.hidden = true;
+    if (novas.length) {
+      novas.forEach((m) => renderNotificacao(m.content));
+      // Só há mudança de etapa quando chega notificação, então esta é a hora
+      // exata de redesenhar a lista, sem precisar de um segundo poll.
+      if (!pedidosPanelEl.classList.contains("hidden")) loadPedidos();
+    }
+  } catch (err) {
+    // Consulta de fundo: um aviso fixo e discreto, nunca uma bolha de erro a
+    // cada tentativa. O intervalo dobra até o teto pra não martelar a API.
+    falhasSeguidas += 1;
+    intervaloNotificacoes = Math.min(
+      intervaloNotificacoes * 2,
+      INTERVALO_NOTIFICACOES_MAXIMO
+    );
+    conexaoAvisoEl.hidden = falhasSeguidas < FALHAS_ATE_AVISAR;
+  } finally {
+    consultaEmVoo = false;
+    agendarNotificacoes();
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    clearTimeout(timerNotificacoes);
+    return;
+  }
+  agendarNotificacoes(falhasSeguidas ? intervaloNotificacoes : 0);
+});
+
 // Abre o painel indicado na URL (#catalogo / #pedidos), pra que recarregar
 // a página não perca o contexto em que a pessoa estava.
 function abrirPainelDaUrl() {
@@ -370,5 +583,7 @@ function abrirPainelDaUrl() {
   }
 }
 
-loadHistory();
+// Só depois do histórico na tela: notificação renderizada antes seria
+// desenhada de novo quando o histórico chegasse.
+loadHistory().then(() => agendarNotificacoes());
 abrirPainelDaUrl();

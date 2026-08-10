@@ -34,7 +34,12 @@ def responder(mensagem_do_usuario: str) -> str:
     repositories.inserir_mensagem("user", mensagem_do_usuario)
 
     conversa: List[dict] = [{"role": "system", "content": config.persona()}]
-    conversa.extend(repositories.listar_mensagens(limite=config.MAX_MENSAGENS_CONTEXTO))
+    # Só role e content vão pro modelo. `tipo` é informação nossa, de tela, e
+    # a API rejeita campo que ela não conhece dentro da mensagem.
+    conversa.extend(
+        {"role": m["role"], "content": m["content"]}
+        for m in repositories.listar_mensagens(limite=config.MAX_MENSAGENS_CONTEXTO)
+    )
 
     client = get_client()
 

@@ -1,6 +1,6 @@
 import json
 
-from app import config
+from app import config, models
 from app.ai import tools
 from tests.conftest import id_por_nome
 
@@ -65,6 +65,35 @@ def test_executar_json_aceita_argumentos_vazios():
 def test_comparar_produtos_pela_tool():
     resultado = tools.executar("comparar_produtos", {"categoria": "audio"})
     assert resultado["melhor_avaliacao"] == "Fone de Ouvido Studio Monitor"
+
+
+def test_rastrear_pedido_pela_tool_devolve_codigo():
+    """Sem o código na resposta, a Lu não tem o que passar pro cliente."""
+    pedido = tools.executar("criar_pedido", {"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    rastreio = tools.executar("rastrear_pedido", {"pedido_id": pedido["id"]})
+
+    assert rastreio["codigo_rastreio"] == pedido["codigo_rastreio"]
+    assert rastreio["etapa_atual"] in rastreio["etapas"]
+
+
+def test_consultar_pedido_pela_tool_traz_codigo_e_etapa_valida():
+    pedido = tools.executar("criar_pedido", {"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    consultado = tools.executar("consultar_pedido", {"pedido_id": pedido["id"]})
+
+    assert consultado["codigo_rastreio"] == pedido["codigo_rastreio"]
+    assert consultado["status"] in models.ETAPAS_RASTREIO
+
+
+def test_agendar_entrega_pela_tool_nao_inventa_status():
+    """O que a Lu conta pro cliente sai daqui: se o agendamento voltasse a
+    virar status, ela anunciaria uma etapa que não existe."""
+    pedido = tools.executar("criar_pedido", {"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    agendado = tools.executar(
+        "agendar_entrega", {"pedido_id": pedido["id"], "data_entrega": "2026-09-15"}
+    )
+
+    assert agendado["data_entrega_agendada"] == "2026-09-15"
+    assert agendado["status"] in models.ETAPAS_RASTREIO
 
 
 def test_buscar_conhecimento_pela_tool():

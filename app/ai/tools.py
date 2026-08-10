@@ -180,7 +180,11 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "rastrear_pedido",
-            "description": "Rastreia um pedido: etapa atual e localização.",
+            "description": (
+                "Rastreia um pedido: código de rastreio, etapa atual e "
+                "localização. Passe o código pro cliente sempre que ele "
+                "perguntar onde está o pedido."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {"pedido_id": {"type": "integer", "description": "ID do pedido."}},

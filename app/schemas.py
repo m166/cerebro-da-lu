@@ -39,6 +39,7 @@ class ChatResponse(BaseModel):
 class MensagemOut(BaseModel):
     role: str
     content: str
+    tipo: str = "chat"
 
 
 class ProdutoOut(BaseModel):
@@ -67,15 +68,22 @@ class PedidoOut(BaseModel):
     valor_total: float
     endereco_entrega: Optional[str] = None
     status: str
+    codigo_rastreio: str
     data_criacao: str
     data_entrega_agendada: Optional[str] = None
 
 
 class RastreioOut(BaseModel):
     pedido_id: int
+    codigo_rastreio: str
     etapa_atual: str
     localizacao: str
     etapas: List[str]
+    entrega_agendada: Optional[str] = None
+
+
+class NotificacoesOut(BaseModel):
+    novas: List[MensagemOut]
 
 
 class ComparacaoOut(BaseModel):

@@ -20,6 +20,18 @@ def banco_isolado(tmp_path, monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def escala_de_entrega_previsivel(monkeypatch):
+    """Fixa o ritmo da esteira, senão o `.env` da máquina decide o resultado.
+
+    `SEGUNDOS_POR_DIA_ENTREGA` vem de variável de ambiente e o `.env.example`
+    convida a mexer nela (20 pra demo, 86400 pra tempo real). Com 1, um pedido
+    recém-criado já aparece "em separação" e testes de fluxo quebram sem que
+    nada no código tenha mudado. Quem testa a escala redefine o valor.
+    """
+    monkeypatch.setattr(config, "SEGUNDOS_POR_DIA_ENTREGA", 20)
+
+
 def _encoder_falso(textos):
     """Encoder determinístico de saco de palavras.
 

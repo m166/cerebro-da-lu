@@ -1,9 +1,33 @@
+from datetime import datetime, timedelta
+
 from fastapi.testclient import TestClient
 
+from app import config
+from app.database import get_connection
 from app.main import app
 from tests.conftest import id_por_nome, resposta_do_modelo, tool_call_falso
 
 client = TestClient(app)
+
+
+def _envelhecer(pedido_id, segundos):
+    """Empurra a criação do pedido pra trás.
+
+    É assim que o tempo passa nos testes de endpoint: por HTTP não dá pra
+    injetar o `agora` que o service aceita, e esperar o relógio deixaria a
+    suíte lenta e instável.
+    """
+    quando = (datetime.utcnow() - timedelta(seconds=segundos)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    conn.execute("UPDATE pedidos SET data_criacao = ? WHERE id = ?", (quando, pedido_id))
+    conn.commit()
+    conn.close()
+
+
+def _metade_do_prazo(produto_id):
+    """Instante em que o pedido vira "enviado", o meio das quatro fatias."""
+    prazo = client.get(f"/api/produtos/{produto_id}").json()["prazo_entrega_dias"]
+    return prazo * config.SEGUNDOS_POR_DIA_ENTREGA / 2
 
 
 # --- Views ---------------------------------------------------------------
@@ -110,11 +134,13 @@ def test_fluxo_completo_do_pedido():
 
     rastreio = client.get(f"/api/pedidos/{pedido_id}/rastreio")
     assert rastreio.json()["etapa_atual"] == "confirmado"
+    assert rastreio.json()["codigo_rastreio"].endswith("BR")
 
     agendado = client.post(
         f"/api/pedidos/{pedido_id}/agendar-entrega", json={"data_entrega": "2026-08-10"}
     )
-    assert agendado.json()["status"] == "entrega agendada"
+    assert agendado.json()["data_entrega_agendada"] == "2026-08-10"
+    assert agendado.json()["status"] == "confirmado"
 
     boleto = client.get(f"/api/pedidos/{pedido_id}/segunda-via", params={"tipo": "boleto"})
     assert boleto.json()["tipo"] == "boleto"
@@ -150,6 +176,22 @@ def test_criar_pedido_quantidade_invalida():
     assert resposta.status_code == 422
 
 
+def test_pedido_traz_codigo_de_rastreio():
+    criado = client.post("/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    codigo = criado.json()["codigo_rastreio"]
+    assert codigo.startswith("LU") and codigo.endswith("BR")
+    assert client.get("/api/pedidos").json()[0]["codigo_rastreio"] == codigo
+    assert client.get(f"/api/pedidos/{criado.json()['id']}").json()["codigo_rastreio"] == codigo
+
+
+def test_rastreio_traz_etapa_valida_e_codigo():
+    criado = client.post("/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    rastreio = client.get(f"/api/pedidos/{criado.json()['id']}/rastreio").json()
+
+    assert rastreio["etapa_atual"] in rastreio["etapas"]
+    assert rastreio["codigo_rastreio"] == criado.json()["codigo_rastreio"]
+
+
 def test_pedido_inexistente_em_todas_as_rotas():
     assert client.get("/api/pedidos/9999").status_code == 404
     assert client.get("/api/pedidos/9999/rastreio").status_code == 404
@@ -157,6 +199,75 @@ def test_pedido_inexistente_em_todas_as_rotas():
     assert client.post(
         "/api/pedidos/9999/agendar-entrega", json={"data_entrega": "2026-08-10"}
     ).status_code == 404
+
+
+# --- Notificações ----------------------------------------------------------
+
+def test_notificacoes_sem_pedido_nenhum():
+    assert client.get("/api/notificacoes").json() == {"novas": []}
+
+
+def test_notificacoes_nao_avisa_pedido_recem_criado():
+    client.post("/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")})
+    assert client.get("/api/notificacoes").json() == {"novas": []}
+
+
+def test_notificacoes_avisa_entra_no_historico_e_nao_repete(monkeypatch):
+    """Escala zero derruba o pedido direto em "entregue", é o jeito de fazer
+    o tempo passar sem o teste ficar esperando o relógio."""
+    from app import config
+
+    criado = client.post(
+        "/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")}
+    ).json()
+    monkeypatch.setattr(config, "SEGUNDOS_POR_DIA_ENTREGA", 0)
+
+    novas = client.get("/api/notificacoes").json()["novas"]
+    assert len(novas) == 1
+    assert novas[0]["role"] == "assistant"
+    assert f"#{criado['id']}" in novas[0]["content"]
+
+    assert client.get("/api/history").json() == novas
+    assert client.get("/api/notificacoes").json() == {"novas": []}
+    assert len(client.get("/api/history").json()) == 1
+
+
+def test_notificacoes_avisa_a_etapa_do_meio_do_caminho():
+    produto_id = id_por_nome("Air Fryer 4L Digital")
+    criado = client.post("/api/pedidos", json={"produto_id": produto_id}).json()
+    _envelhecer(criado["id"], _metade_do_prazo(produto_id))
+
+    novas = client.get("/api/notificacoes").json()["novas"]
+    assert len(novas) == 1
+    assert criado["codigo_rastreio"] in novas[0]["content"]
+    assert client.get(f"/api/pedidos/{criado['id']}/rastreio").json()["etapa_atual"] == "enviado"
+
+
+def test_status_da_lista_bate_com_a_etapa_do_rastreio():
+    """O painel lê o status de /api/pedidos e a etapa do rastreio: divergir
+    entre as duas telas é o mesmo pedido em dois lugares ao mesmo tempo."""
+    produto_id = id_por_nome("Air Fryer 4L Digital")
+    criado = client.post("/api/pedidos", json={"produto_id": produto_id}).json()
+    assert criado["status"] == "confirmado"
+
+    _envelhecer(criado["id"], _metade_do_prazo(produto_id))
+    listado = client.get("/api/pedidos").json()[0]
+    rastreio = client.get(f"/api/pedidos/{criado['id']}/rastreio").json()
+
+    assert listado["status"] == rastreio["etapa_atual"] == "enviado"
+    assert client.get(f"/api/pedidos/{criado['id']}").json()["status"] == "enviado"
+
+
+def test_agendar_entrega_de_pedido_em_transito_nao_volta_o_status():
+    produto_id = id_por_nome("Air Fryer 4L Digital")
+    criado = client.post("/api/pedidos", json={"produto_id": produto_id}).json()
+    _envelhecer(criado["id"], _metade_do_prazo(produto_id))
+
+    agendado = client.post(
+        f"/api/pedidos/{criado['id']}/agendar-entrega", json={"data_entrega": "2026-09-15"}
+    ).json()
+    assert agendado["data_entrega_agendada"] == "2026-09-15"
+    assert agendado["status"] == "enviado"
 
 
 # --- Chat (Groq sempre mockada) -------------------------------------------
@@ -173,8 +284,8 @@ def test_chat_sem_tool_call(groq_falso):
     assert resposta.json()["reply"] == "Oi! Como posso ajudar?"
 
     assert client.get("/api/history").json() == [
-        {"role": "user", "content": "oi"},
-        {"role": "assistant", "content": "Oi! Como posso ajudar?"},
+        {"role": "user", "content": "oi", "tipo": "chat"},
+        {"role": "assistant", "content": "Oi! Como posso ajudar?", "tipo": "chat"},
     ]
 
 
@@ -262,3 +373,31 @@ def test_chat_desiste_apos_limite_de_tool_calls(groq_falso, monkeypatch):
 
     resposta = client.post("/api/chat", json={"content": "loop infinito"})
     assert resposta.status_code == 502
+
+
+def test_notificacao_se_identifica_pelo_tipo_e_nao_pelo_texto():
+    """A tela precisa distinguir aviso automático de resposta da Lu. Antes
+    isso era adivinhado por regex no texto, e reescrever a frase no backend
+    quebrava a distinção sem erro nenhum."""
+    produto_id = id_por_nome("Smartphone Nova 5G")
+    pedido_id = client.post("/api/pedidos", json={"produto_id": produto_id}).json()["id"]
+    _envelhecer(pedido_id, segundos=config.SEGUNDOS_POR_DIA_ENTREGA * 30)
+
+    novas = client.get("/api/notificacoes").json()["novas"]
+    assert novas
+    assert all(m["tipo"] == "notificacao" for m in novas)
+    assert all(m["role"] == "assistant" for m in novas)
+
+    historico = client.get("/api/history").json()
+    avisos = [m for m in historico if m["tipo"] == "notificacao"]
+    assert len(avisos) == len(novas)
+
+
+def test_resposta_normal_da_lu_e_do_tipo_chat(groq_falso):
+    groq_falso(resposta_do_modelo(content="Seu pedido #1 chegou? Deixa eu conferir."))
+    client.post("/api/chat", json={"content": "e o pedido 1?"})
+
+    historico = client.get("/api/history").json()
+    # Texto que imita o formato do aviso, mas é resposta de verdade: com o
+    # regex antigo isso viraria bolha de notificação.
+    assert all(m["tipo"] == "chat" for m in historico)

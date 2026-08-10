@@ -27,7 +27,7 @@ app/
   vectorstore.py    índice vetorial do RAG (lazy, análogo a database.py)
   routers/
     views.py        serve o HTML do chat
-    chat.py         /api/chat, /api/history
+    chat.py         /api/chat, /api/history, /api/notificacoes
     produtos.py     /api/produtos, /api/categorias, sugestão, comparação,
                     /api/conhecimento
     pedidos.py      /api/pedidos + rastreio, agendamento, 2ª via
@@ -174,6 +174,41 @@ Regras da avaliação:
 - Se um caso falhar, considere que a expectativa pode estar errada antes
   de mexer no sistema, já aconteceu de o caso pedir tool onde a persona
   manda perguntar primeiro.
+
+## Status do pedido é derivado, não guardado
+
+O pedido percorre sozinho as cinco etapas de `models.ETAPAS_RASTREIO`, e
+isso funciona sem nenhum job em segundo plano: `services.status_derivado`
+calcula a etapa a partir de `data_criacao`, do `prazo_entrega_dias` do
+produto e de `config.SEGUNDOS_POR_DIA_ENTREGA`. Consequências práticas:
+
+- **A coluna `status` é cache, não fonte da verdade.** Quem manda é o
+  cálculo. Não escreva regra que leia `status` do banco esperando que
+  esteja em dia.
+- `SEGUNDOS_POR_DIA_ENTREGA` vale 20 por padrão pra que a demo mostre um
+  pedido chegando em cerca de um minuto. Coloque 86400 pra tempo real.
+- `status_derivado` aceita `agora` justamente pra que teste não precise de
+  `time.sleep`. Use isso, teste com relógio real fica lento e instável.
+- **Agendar entrega não mexe no status.** São coisas diferentes: uma é a
+  etapa da logística, a outra é a data combinada. Já houve bug por
+  misturar as duas, com a etapa atual caindo fora de `ETAPAS_RASTREIO`.
+
+`services.sincronizar_notificacoes` compara a etapa calculada com
+`status_notificado` e escreve no histórico do chat quando mudou. É
+idempotente por causa dessa coluna. Note que ela avisa a etapa **atual**:
+se o cliente ficou fora e o pedido pulou de "confirmado" pra "entregue",
+sai um aviso só, não quatro.
+
+Quem dispara a sincronização é a consulta a `/api/notificacoes`, feita
+pelo frontend. Sem alguém consultando, ninguém percebe que o pedido andou.
+
+## Migração de schema
+
+`CREATE TABLE IF NOT EXISTS` não adiciona coluna em banco que já existe.
+Coluna nova entra em `models.COLUNAS_ADICIONADAS` e o
+`database._migrar_colunas` aplica com ALTER TABLE, conferindo antes o
+`PRAGMA table_info`. É idempotente e roda no `init_db`. Sem isso, quem já
+tinha `cerebro.db` quebra depois de atualizar o código.
 
 ## Sobre o RAG
 

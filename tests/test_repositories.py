@@ -9,8 +9,8 @@ def test_inserir_e_listar_mensagens():
     repositories.inserir_mensagem("user", "oi")
     repositories.inserir_mensagem("assistant", "ola")
     assert repositories.listar_mensagens() == [
-        {"role": "user", "content": "oi"},
-        {"role": "assistant", "content": "ola"},
+        {"role": "user", "content": "oi", "tipo": "chat"},
+        {"role": "assistant", "content": "ola", "tipo": "chat"},
     ]
 
 
@@ -44,7 +44,9 @@ def test_banco_apagado_com_app_no_ar_se_recupera():
 
     assert repositories.listar_mensagens() == []
     repositories.inserir_mensagem("user", "depois")
-    assert repositories.listar_mensagens() == [{"role": "user", "content": "depois"}]
+    assert repositories.listar_mensagens() == [
+        {"role": "user", "content": "depois", "tipo": "chat"}
+    ]
 
 
 # --- Pedidos -------------------------------------------------------------
@@ -62,11 +64,37 @@ def test_obter_pedido_inexistente_retorna_none():
     assert repositories.obter_pedido(9999) is None
 
 
-def test_atualizar_entrega_agendada():
+def test_atualizar_entrega_agendada_nao_mexe_no_status():
+    """Agendar é combinar uma data, não uma etapa da logística: o pedido
+    agendado continua sendo separado, enviado e entregue."""
     pedido = repositories.inserir_pedido(1, "Notebook Titan X15", 1, 4899.90)
     atualizado = repositories.atualizar_entrega_agendada(pedido["id"], "2026-08-05")
     assert atualizado["data_entrega_agendada"] == "2026-08-05"
-    assert atualizado["status"] == "entrega agendada"
+    assert atualizado["status"] == pedido["status"]
+
+
+def test_pedido_nasce_com_status_inicial_ja_comunicado():
+    """Quem criou o pedido acabou de ver a confirmação; notificar de novo
+    seria eco."""
+    pedido = repositories.inserir_pedido(1, "Notebook Titan X15", 1, 4899.90)
+    assert pedido["status_notificado"] == "confirmado"
+
+
+def test_marcar_status_notificado_atualiza_as_duas_colunas():
+    pedido = repositories.inserir_pedido(1, "Notebook Titan X15", 1, 4899.90)
+    repositories.marcar_status_notificado(pedido["id"], "enviado")
+
+    atualizado = repositories.obter_pedido(pedido["id"])
+    assert atualizado["status"] == "enviado"
+    assert atualizado["status_notificado"] == "enviado"
+
+
+def test_definir_codigo_rastreio():
+    pedido = repositories.inserir_pedido(1, "Notebook Titan X15", 1, 4899.90)
+    assert pedido["codigo_rastreio"] is None
+
+    atualizado = repositories.definir_codigo_rastreio(pedido["id"], "LU000000014BR")
+    assert atualizado["codigo_rastreio"] == "LU000000014BR"
 
 
 # --- Catálogo -------------------------------------------------------------
@@ -80,6 +108,14 @@ def test_toda_categoria_tem_no_minimo_quatro_produtos():
     for categoria in catalogo.CATEGORIAS:
         produtos = repositories.listar_produtos(categoria=categoria)
         assert len(produtos) >= 4, f"categoria {categoria} tem só {len(produtos)}"
+
+
+def test_todo_produto_declara_prazo_de_entrega_util():
+    """O prazo é a régua da progressão de status: produto sem ele derruba o
+    rastreio com KeyError, e com zero o pedido nasceria entregue."""
+    for produto in catalogo.PRODUTOS:
+        prazo = produto.get("prazo_entrega_dias")
+        assert isinstance(prazo, int) and prazo > 0, produto["nome"]
 
 
 def test_ids_sao_unicos_e_sequenciais():

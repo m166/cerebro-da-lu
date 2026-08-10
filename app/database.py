@@ -23,7 +23,7 @@ def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
     # Recriar o schema aqui custa um stat por conexão e evita esse estado.
     if not Path(caminho).exists():
         conn = _conectar(caminho)
-        _criar_tabelas(conn)
+        _preparar_schema(conn)
         return conn
 
     return _conectar(caminho)
@@ -35,7 +35,30 @@ def _criar_tabelas(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _migrar_colunas(conn: sqlite3.Connection) -> None:
+    """Acrescenta colunas novas em banco que já existe.
+
+    O DDL usa `CREATE TABLE IF NOT EXISTS`, que não faz nada quando a tabela
+    já foi criada por uma versão anterior: sem isso, o `cerebro.db` de quem
+    já usava o app continuaria sem `codigo_rastreio` e toda consulta
+    quebraria. É idempotente, roda a cada init_db.
+    """
+    for tabela, colunas in models.COLUNAS_ADICIONADAS.items():
+        existentes = {linha["name"] for linha in conn.execute(f"PRAGMA table_info({tabela})")}
+        if not existentes:
+            continue
+        for nome, tipo in colunas:
+            if nome not in existentes:
+                conn.execute(f"ALTER TABLE {tabela} ADD COLUMN {nome} {tipo}")
+    conn.commit()
+
+
+def _preparar_schema(conn: sqlite3.Connection) -> None:
+    _criar_tabelas(conn)
+    _migrar_colunas(conn)
+
+
 def init_db(db_path: Optional[Path] = None) -> None:
     conn = get_connection(db_path)
-    _criar_tabelas(conn)
+    _preparar_schema(conn)
     conn.close()

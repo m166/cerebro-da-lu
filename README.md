@@ -101,7 +101,13 @@ real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
   que permite responder "meu quarto tem 12m² e bate sol" com "9000 BTUs,
   e por isso este modelo" em vez de só listar preço.
 - **2ª via de boleto ou nota fiscal** (mockado).
-- **Rastreio de pedido**: onde está, etapa atual.
+- **Rastreio de pedido**: código no formato dos Correios, etapa atual e
+  localização.
+- **Pedido que anda sozinho**: o status percorre as cinco etapas
+  (confirmado, em separação, enviado, saiu para entrega, entregue) conforme
+  o tempo passa, no ritmo do prazo de entrega do produto.
+- **Aviso automático no chat** a cada mudança de etapa, com o código de
+  rastreio quando já há o que rastrear.
 - **Catálogo navegável**: painel com filtro por categoria e busca, onde o
   cliente explora e pede direto, além de conversar pelo chat.
 - **Painel de pedidos**: lista os pedidos e permite rastrear, agendar
@@ -144,6 +150,7 @@ agora é validar o fluxo de produto.
 | --- | --- | --- |
 | POST | `/api/chat` | conversa com a Lu (com tool calling) |
 | GET | `/api/history` | histórico persistido da conversa |
+| GET | `/api/notificacoes` | avanços de status desde a última consulta |
 | GET | `/api/categorias` | lista as categorias do catálogo |
 | GET | `/api/conhecimento` | busca semântica na base (`pergunta`, `categoria`) |
 | GET | `/api/produtos` | lista/busca produtos (`query`, `categoria`, `limite`) |
@@ -203,6 +210,8 @@ agora é validar o fluxo de produto.
 - Catálogo, pedidos, estoque, rastreio, agendamento e 2ª via são **dados
   mockados**, pensados pra simular as integrações reais que um produto
   como esse teria no Magalu.
+- Pedido criado ganha código de rastreio e avança de etapa sozinho, com
+  aviso automático no chat a cada mudança.
 - A busca exposta ao modelo devolve no máximo 10 produtos por vez (com o
   total encontrado), pra não estourar o contexto com 113 itens.
 - Ainda não há autenticação nem multi-usuário, é single-user, uso local.
@@ -224,6 +233,39 @@ indexadas não podem ser cópia dos casos de avaliação, há teste em
 `tests/test_rag.py` que falha se alguma passar de 50% de sobreposição de
 termos de conteúdo. Doze casos do conjunto foram escritos depois do
 enriquecimento, justamente pra medir pergunta inédita.
+
+### O status do pedido é derivado, não gravado
+
+Um pedido precisa andar sozinho pela logística, mas manter isso com um job
+que grava status de tempos em tempos exigiria um processo de fundo, e o
+banco ficaria desatualizado sempre que o app estivesse parado.
+
+Em vez disso a etapa é **calculada na leitura**, a partir do tempo desde a
+criação do pedido sobre o prazo de entrega do produto. As quatro etapas de
+trânsito dividem o prazo em fatias iguais e "entregue" começa quando o
+prazo vence, ficando assim pra sempre. `SEGUNDOS_POR_DIA_ENTREGA` diz
+quantos segundos reais valem um dia: com o padrão de 20, um produto de
+prazo 4 percorre tudo em ~80 segundos, o que cabe numa demo; 86400 simula
+tempo real. Como é função pura do relógio, `services.status_derivado()` é
+testável sem esperar nada, basta passar o instante.
+
+Agendar entrega deixou de ser status. Antes ele sobrescrevia a etapa com
+"entrega agendada", que nem existe em `ETAPAS_RASTREIO`, e o rastreio
+passava a devolver uma etapa fora da própria lista de etapas. São eixos
+diferentes: a data combinada vive em `data_entrega_agendada` e o pedido
+continua sendo separado, enviado e entregue.
+
+O aviso no chat sai de `GET /api/notificacoes`, que compara a etapa atual
+com a última já comunicada (`status_notificado`) e grava a diferença como
+mensagem da Lu no histórico. É idempotente: consultar duas vezes não
+duplica mensagem, e quem ficou horas fora recebe só o estado atual, não as
+cinco etapas de uma vez.
+
+Novidade é só o que está adiante do que já foi dito. Como a etapa é
+derivada, ela pode recuar sem que o pedido tenha andado (a escala de
+`SEGUNDOS_POR_DIA_ENTREGA` muda entre execuções, o prazo do produto
+aumenta no catálogo). Nesse caso a Lu fica calada, em vez de anunciar
+"confirmado" num pedido que ela já deu como entregue.
 
 ### Limite de tokens da Groq
 
