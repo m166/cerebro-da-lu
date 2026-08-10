@@ -5,7 +5,11 @@ chamar. Só o texto final (user/assistant) é persistido; as chamadas de
 ferramenta ficam fora do histórico salvo.
 """
 
-from typing import List
+import math
+import re
+from typing import List, Optional
+
+from groq import RateLimitError
 
 from app import config, repositories
 from app.ai import tools
@@ -16,21 +20,39 @@ class ChatIncompleto(Exception):
     """O modelo não fechou a resposta dentro do limite de rodadas de tools."""
 
 
+class LimiteDeUso(Exception):
+    """A conta da Groq bateu o teto de tokens por minuto."""
+
+
+def _segundos_para_tentar(mensagem: str) -> Optional[int]:
+    """Extrai o tempo de espera que a Groq informa na mensagem de erro."""
+    achado = re.search(r"try again in ([\d.]+)s", mensagem)
+    return math.ceil(float(achado.group(1))) if achado else None
+
+
 def responder(mensagem_do_usuario: str) -> str:
     repositories.inserir_mensagem("user", mensagem_do_usuario)
 
     conversa: List[dict] = [{"role": "system", "content": config.persona()}]
-    conversa.extend(repositories.listar_mensagens())
+    conversa.extend(repositories.listar_mensagens(limite=config.MAX_MENSAGENS_CONTEXTO))
 
     client = get_client()
 
     for _ in range(config.MAX_TOOL_ITERATIONS):
-        completion = client.chat.completions.create(
-            model=config.GROQ_MODEL,
-            messages=conversa,
-            tools=tools.TOOL_SCHEMAS,
-            tool_choice="auto",
-        )
+        try:
+            completion = client.chat.completions.create(
+                model=config.GROQ_MODEL,
+                messages=conversa,
+                tools=tools.TOOL_SCHEMAS,
+                tool_choice="auto",
+            )
+        except RateLimitError as exc:
+            espera = _segundos_para_tentar(str(exc))
+            quando = f" Tente de novo em {espera}s." if espera else ""
+            raise LimiteDeUso(
+                f"A conta da Groq atingiu o limite de uso por minuto.{quando}"
+            ) from exc
+
         message = completion.choices[0].message
 
         if not message.tool_calls:

@@ -73,6 +73,13 @@ services, então quem orquestra o modelo fica acima de ambos).
   traduzem pra `HTTPException` (o corpo sai como `{"detail": ...}`, que é
   o que o frontend lê); `ai/tools.py` traduz pra `{"erro": ...}`, formato
   que o modelo entende melhor que uma exceção.
+- **Cuide do orçamento de tokens.** A conta free da Groq dá 8000 tokens
+  por minuto, e cada requisição já carrega persona (~920) mais schemas das
+  tools (~1400) antes de qualquer conteúdo. Por isso o histórico enviado
+  ao modelo é uma janela (`config.MAX_MENSAGENS_CONTEXTO`), enquanto
+  `/api/history` continua devolvendo tudo pra tela. Ao criar tool ou
+  aumentar a persona, lembre que o custo é pago em toda rodada de tool
+  calling, não uma vez por conversa.
 - **Ferramenta que devolve vazio custa caro.** O modelo reformula e chama
   de novo, gastando rodada de tool calling, foi assim que a busca de
   produto, sensível a acento, derrubava a resposta por estourar o limite.

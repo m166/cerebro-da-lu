@@ -19,6 +19,8 @@ def history():
 def chat(request: schemas.ChatRequest):
     try:
         return {"reply": chat_service.responder(request.content)}
+    except chat_service.LimiteDeUso as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
     except chat_service.ChatIncompleto as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     except Exception as exc:

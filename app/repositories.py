@@ -22,9 +22,20 @@ def inserir_mensagem(role: str, content: str) -> None:
     conn.close()
 
 
-def listar_mensagens() -> List[dict]:
+def listar_mensagens(limite: Optional[int] = None) -> List[dict]:
+    """Histórico em ordem cronológica. Com `limite`, traz só as últimas."""
     conn = get_connection()
-    rows = conn.execute("SELECT role, content FROM messages ORDER BY id").fetchall()
+    if limite:
+        rows = conn.execute(
+            """
+            SELECT role, content FROM (
+                SELECT id, role, content FROM messages ORDER BY id DESC LIMIT ?
+            ) ORDER BY id
+            """,
+            (limite,),
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT role, content FROM messages ORDER BY id").fetchall()
     conn.close()
     return [{"role": row["role"], "content": row["content"]} for row in rows]
 

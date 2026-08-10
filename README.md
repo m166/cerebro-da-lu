@@ -225,6 +225,22 @@ indexadas não podem ser cópia dos casos de avaliação, há teste em
 termos de conteúdo. Doze casos do conjunto foram escritos depois do
 enriquecimento, justamente pra medir pergunta inédita.
 
+### Limite de tokens da Groq
+
+A conta free trabalha com 8000 tokens por minuto. Cada requisição de chat
+carrega a persona (~920 tokens) e os schemas das ferramentas (~1400) antes
+de qualquer conteúdo, e esse custo é pago de novo a cada rodada de tool
+calling. Somando o histórico completo, poucas trocas de mensagem bastavam
+pra estourar o teto e derrubar a resposta com erro 429.
+
+Por isso o que vai pro modelo é uma janela das últimas
+`MAX_MENSAGENS_CONTEXTO` mensagens, hoje 10. O histórico completo continua
+no banco e na tela, via `/api/history`. Isso levou o custo por requisição
+de ~4900 tokens, crescendo sem limite, pra ~3600 com teto estável.
+
+Quando o limite é atingido mesmo assim, a API responde 429 com uma frase
+legível e o tempo de espera, em vez do JSON cru do provedor.
+
 ### Busca híbrida: cada sinal tem um papel
 
 O RAG combina embedding com BM25, mas eles não fazem a mesma coisa:

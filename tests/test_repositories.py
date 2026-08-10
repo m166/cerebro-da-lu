@@ -18,6 +18,22 @@ def test_historico_comeca_vazio():
     assert repositories.listar_mensagens() == []
 
 
+def test_listar_mensagens_com_limite_traz_as_ultimas_em_ordem():
+    """O modelo recebe só uma janela do histórico; reenviar a conversa
+    inteira a cada rodada de tool calling estourava o limite de tokens."""
+    for i in range(6):
+        repositories.inserir_mensagem("user", f"mensagem {i}")
+
+    recentes = repositories.listar_mensagens(limite=3)
+    assert [m["content"] for m in recentes] == ["mensagem 3", "mensagem 4", "mensagem 5"]
+
+
+def test_listar_mensagens_sem_limite_traz_tudo():
+    for i in range(4):
+        repositories.inserir_mensagem("user", f"mensagem {i}")
+    assert len(repositories.listar_mensagens()) == 4
+
+
 def test_banco_apagado_com_app_no_ar_se_recupera():
     """Sem isso, apagar o arquivo deixa toda consulta falhando com
     "no such table" até alguém reiniciar o processo."""

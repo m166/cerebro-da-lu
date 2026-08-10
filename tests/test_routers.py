@@ -211,6 +211,45 @@ def test_chat_erro_da_groq_virou_502(groq_falso):
     assert resposta.status_code == 502
 
 
+def test_chat_limite_de_uso_vira_429_legivel(groq_falso):
+    """Despejar o JSON cru da Groq na tela não diz nada pro cliente."""
+    from unittest.mock import MagicMock
+
+    from groq import RateLimitError
+
+    erro = RateLimitError(
+        "Rate limit reached for model. Please try again in 34.89s.",
+        response=MagicMock(status_code=429, headers={}),
+        body=None,
+    )
+    groq_falso(erro)
+
+    resposta = client.post("/api/chat", json={"content": "oi"})
+    assert resposta.status_code == 429
+    detalhe = resposta.json()["detail"]
+    assert "limite de uso" in detalhe
+    assert "35s" in detalhe
+
+
+def test_chat_envia_so_a_janela_do_historico(groq_falso, monkeypatch):
+    """O histórico completo fica na tela, mas o que vai pro modelo é
+    limitado, senão o custo por requisição cresce sem parar."""
+    from app import config, repositories
+
+    monkeypatch.setattr(config, "MAX_MENSAGENS_CONTEXTO", 4)
+    for i in range(10):
+        repositories.inserir_mensagem("user", f"antiga {i}")
+
+    fake = groq_falso(resposta_do_modelo(content="ok"))
+    client.post("/api/chat", json={"content": "nova"})
+
+    enviadas = fake.chat.completions.create.call_args.kwargs["messages"]
+    assert enviadas[0]["role"] == "system"
+    assert len(enviadas) == 5
+    assert enviadas[-1]["content"] == "nova"
+    assert len(client.get("/api/history").json()) == 12
+
+
 def test_chat_desiste_apos_limite_de_tool_calls(groq_falso, monkeypatch):
     from app import config
 

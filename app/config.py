@@ -24,7 +24,15 @@ MAX_TOOL_ITERATIONS = 6
 
 # Quantos produtos a busca devolve pro modelo por padrão, o catálogo tem
 # mais de 100 itens e mandar todos estouraria o contexto sem necessidade.
-LIMITE_BUSCA_TOOL = 10
+LIMITE_BUSCA_TOOL = 8
+
+# Quantas mensagens do histórico vão pro modelo. O histórico completo
+# continua no banco e na tela; o que é enviado precisa ser limitado porque
+# a conta free da Groq trabalha com 8000 tokens por minuto, e reenviar a
+# conversa inteira a cada rodada de tool calling estourava esse teto depois
+# de poucas trocas. Dez mensagens (cinco idas e voltas) preserva o
+# "esse aí" e o "o mais barato" da pergunta anterior.
+MAX_MENSAGENS_CONTEXTO = 10
 
 # RAG: modelo multilíngue treinado pra retrieval. Foi escolhido depois de
 # comparar com paraphrase-multilingual-MiniLM, que acertava 1 de 4 buscas
