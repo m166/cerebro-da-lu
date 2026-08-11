@@ -29,7 +29,7 @@ def notificacoes():
 @router.post("/chat", response_model=schemas.ChatResponse)
 def chat(request: schemas.ChatRequest):
     try:
-        return {"reply": chat_service.responder(request.content)}
+        return chat_service.responder(request.content)
     except chat_service.LimiteDeUso as exc:
         raise HTTPException(status_code=429, detail=str(exc))
     except chat_service.ChatIncompleto as exc:

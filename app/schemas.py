@@ -34,12 +34,14 @@ class ComparacaoRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+    produtos: List["ProdutoOut"] = []
 
 
 class MensagemOut(BaseModel):
     role: str
     content: str
     tipo: str = "chat"
+    produtos: List["ProdutoOut"] = []
 
 
 class ProdutoOut(BaseModel):
@@ -51,6 +53,7 @@ class ProdutoOut(BaseModel):
     avaliacao: float
     estoque: int
     descricao: str
+    imagem: str
 
 
 class EstoqueOut(BaseModel):

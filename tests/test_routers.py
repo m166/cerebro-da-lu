@@ -284,8 +284,8 @@ def test_chat_sem_tool_call(groq_falso):
     assert resposta.json()["reply"] == "Oi! Como posso ajudar?"
 
     assert client.get("/api/history").json() == [
-        {"role": "user", "content": "oi", "tipo": "chat"},
-        {"role": "assistant", "content": "Oi! Como posso ajudar?", "tipo": "chat"},
+        {"role": "user", "content": "oi", "tipo": "chat", "produtos": []},
+        {"role": "assistant", "content": "Oi! Como posso ajudar?", "tipo": "chat", "produtos": []},
     ]
 
 
@@ -424,3 +424,40 @@ def test_cadastro_entra_no_prompt_e_sobrevive_a_janela(groq_falso, monkeypatch):
     assert enviadas[0]["role"] == "system"
     assert "Rua A, 1" in system
     assert not any("Rua A, 1" in m["content"] for m in enviadas[1:])
+
+
+def test_chat_devolve_produtos_pra_virar_cartao(groq_falso):
+    """O texto sozinho não mostra foto nem preço em destaque. A resposta traz
+    os produtos que as ferramentas consultaram, e a tela monta o cartão."""
+    chamada = tool_call_falso("buscar_produtos", '{"categoria": "air-fryers"}')
+    groq_falso(
+        resposta_do_modelo(content="", tool_calls=[chamada]),
+        resposta_do_modelo(content="Tenho estas opções."),
+    )
+
+    resposta = client.post("/api/chat", json={"content": "quero air fryer"}).json()
+    assert resposta["produtos"]
+    assert all(p["imagem"].endswith(".svg") for p in resposta["produtos"])
+    assert len(resposta["produtos"]) <= config.MAX_PRODUTOS_NA_RESPOSTA
+
+
+def test_cartao_sobrevive_ao_recarregar(groq_falso):
+    """Sem guardar os ids, o cartão só existia no envio ao vivo e sumia."""
+    chamada = tool_call_falso("buscar_produtos", '{"categoria": "air-fryers"}')
+    groq_falso(
+        resposta_do_modelo(content="", tool_calls=[chamada]),
+        resposta_do_modelo(content="Tenho estas opções."),
+    )
+    enviados = client.post("/api/chat", json={"content": "quero air fryer"}).json()["produtos"]
+
+    do_historico = client.get("/api/history").json()[-1]
+    assert [p["id"] for p in do_historico["produtos"]] == [p["id"] for p in enviados]
+
+
+def test_mensagem_do_cliente_nao_carrega_produto(groq_falso):
+    groq_falso(resposta_do_modelo(content="oi"))
+    client.post("/api/chat", json={"content": "oi"})
+
+    historico = client.get("/api/history").json()
+    assert historico[0]["role"] == "user"
+    assert historico[0]["produtos"] == []

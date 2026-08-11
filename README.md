@@ -108,8 +108,11 @@ real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
   o tempo passa, no ritmo do prazo de entrega do produto.
 - **Aviso automático no chat** a cada mudança de etapa, com o código de
   rastreio quando já há o que rastrear.
-- **Catálogo navegável**: painel com filtro por categoria e busca, onde o
-  cliente explora e pede direto, além de conversar pelo chat.
+- **Catálogo navegável**: vitrine com imagem, preço e ação de pedir, com
+  filtro por categoria e busca.
+- **Cartão de produto na conversa**: o que a Lu consultar aparece como
+  cartão com ilustração, preço e botão, logo abaixo da resposta dela, em
+  vez de virar parágrafo de texto.
 - **Painel de pedidos**: lista os pedidos e permite rastrear, agendar
   entrega e gerar 2ª via de boleto/NF sem passar pelo chat.
 

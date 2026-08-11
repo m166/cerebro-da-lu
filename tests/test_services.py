@@ -441,9 +441,17 @@ def test_notificacao_quando_o_pedido_anda():
 
 
 def test_notificacao_entra_no_historico_do_chat():
+    """Compara os campos que importam, não o dicionário inteiro: a mensagem
+    ganhou campos de tela (`produtos`) que a notificação não preenche."""
     pedido = services.criar_pedido(id_por_nome("Air Fryer 4L Digital"))
     novas = services.sincronizar_notificacoes(_instante(pedido, 0.55))
-    assert repositories.listar_mensagens() == novas
+
+    gravadas = repositories.listar_mensagens()
+    assert len(gravadas) == len(novas) == 1
+    for gravada, nova in zip(gravadas, novas):
+        assert gravada["role"] == nova["role"]
+        assert gravada["content"] == nova["content"]
+        assert gravada["tipo"] == nova["tipo"]
 
 
 def test_notificacao_e_idempotente():

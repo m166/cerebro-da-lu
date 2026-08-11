@@ -9,8 +9,8 @@ def test_inserir_e_listar_mensagens():
     repositories.inserir_mensagem("user", "oi")
     repositories.inserir_mensagem("assistant", "ola")
     assert repositories.listar_mensagens() == [
-        {"role": "user", "content": "oi", "tipo": "chat"},
-        {"role": "assistant", "content": "ola", "tipo": "chat"},
+        {"role": "user", "content": "oi", "tipo": "chat", "produtos": []},
+        {"role": "assistant", "content": "ola", "tipo": "chat", "produtos": []},
     ]
 
 
@@ -45,7 +45,7 @@ def test_banco_apagado_com_app_no_ar_se_recupera():
     assert repositories.listar_mensagens() == []
     repositories.inserir_mensagem("user", "depois")
     assert repositories.listar_mensagens() == [
-        {"role": "user", "content": "depois", "tipo": "chat"}
+        {"role": "user", "content": "depois", "tipo": "chat", "produtos": []}
     ]
 
 

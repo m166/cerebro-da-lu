@@ -49,15 +49,146 @@ function anexarBolha(bolha, sempreRolar = true) {
   if (acompanhar) messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function renderMessage(role, content) {
+function agora() {
+  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Separador de dia, como num app de mensagem. Só aparece quando a data muda,
+// então uma conversa do mesmo dia não ganha faixa nenhuma.
+let ultimaData = null;
+
+function marcarDia(rotulo) {
+  if (rotulo === ultimaData) return;
+  ultimaData = rotulo;
+  const faixa = document.createElement("div");
+  faixa.className = "separador-data";
+  faixa.textContent = rotulo;
+  messagesEl.appendChild(faixa);
+}
+
+// Converte só **negrito**, montando nós de texto. Markdown completo não vale
+// o risco nem o peso aqui, mas deixar os asteriscos crus na tela é sujeira.
+function comNegrito(conteudo) {
+  const fragmento = document.createDocumentFragment();
+  String(conteudo)
+    .split(/(\*\*[^*]+\*\*)/g)
+    .forEach((pedaco) => {
+      if (!pedaco) return;
+      if (pedaco.startsWith("**") && pedaco.endsWith("**") && pedaco.length > 4) {
+        const forte = document.createElement("strong");
+        forte.textContent = pedaco.slice(2, -2);
+        fragmento.appendChild(forte);
+      } else {
+        fragmento.appendChild(document.createTextNode(pedaco));
+      }
+    });
+  return fragmento;
+}
+
+function criarBalao(classe, conteudo, hora, comTique) {
   const bubble = document.createElement("div");
-  bubble.className = `bubble ${role}`;
-  bubble.textContent = content;
-  anexarBolha(bubble);
+  bubble.className = `bubble ${classe}`;
+
+  const texto = document.createElement("span");
+  texto.appendChild(comNegrito(conteudo));
+  bubble.appendChild(texto);
+
+  if (hora) {
+    const marca = document.createElement("span");
+    marca.className = "hora";
+    marca.append(document.createTextNode(hora));
+    if (comTique) {
+      const tique = document.createElement("span");
+      tique.className = "tique";
+      tique.textContent = "\u2713\u2713";
+      marca.appendChild(tique);
+    }
+    bubble.appendChild(marca);
+  }
+  return bubble;
+}
+
+// Avatar só na primeira mensagem de uma sequência da Lu: repetir a cada balão
+// polui e é o que apps de mensagem evitam.
+let ultimoAutor = null;
+
+function renderMessage(role, content, hora = agora()) {
+  if (role === "error") {
+    anexarBolha(criarBalao("error", content));
+    ultimoAutor = null;
+    return;
+  }
+
+  marcarDia("Hoje");
+
+  const linha = document.createElement("div");
+  const daLu = role === "assistant";
+  linha.className = `linha-mensagem ${daLu ? "da-lu" : "de-mim"}`;
+  if (ultimoAutor !== role) linha.classList.add("mostra-avatar");
+  ultimoAutor = role;
+
+  const avatar = document.createElement("span");
+  avatar.className = "avatar avatar-pequeno";
+  avatar.setAttribute("aria-hidden", "true");
+  avatar.textContent = daLu ? "Lu" : "";
+  if (!daLu) avatar.style.visibility = "hidden";
+
+  linha.append(avatar, criarBalao(role, content, hora, !daLu));
+  anexarBolha(linha);
 }
 
 function renderError(text) {
   renderMessage("error", text);
+}
+
+// Cartão do produto ao lado da fala da Lu. Foi o que resolveu a queixa de que
+// tudo chegava em texto: preço, foto e ação ficam visíveis sem ler o parágrafo.
+function renderCartoesProduto(produtos) {
+  if (!produtos || !produtos.length) return;
+
+  const caixa = document.createElement("div");
+  caixa.className = "cartoes-produto";
+
+  produtos.forEach((produto) => {
+    const cartao = document.createElement("div");
+    cartao.className = "cartao-produto";
+
+    const foto = document.createElement("img");
+    foto.src = produto.imagem;
+    foto.alt = produto.nome;
+    foto.loading = "lazy";
+
+    const texto = document.createElement("div");
+    texto.className = "cartao-texto";
+
+    const nome = document.createElement("p");
+    nome.className = "cartao-nome";
+    nome.textContent = produto.nome;
+
+    const preco = document.createElement("p");
+    preco.className = "cartao-preco";
+    preco.textContent = moeda.format(produto.preco);
+
+    const meta = document.createElement("p");
+    meta.className = "cartao-meta";
+    meta.textContent = `${produto.prazo_entrega_dias} dia(s) \u00b7 \u2b50 ${produto.avaliacao}`;
+
+    texto.append(nome, preco, meta);
+
+    const pedir = document.createElement("button");
+    pedir.type = "button";
+    pedir.className = "botao-primario";
+    pedir.textContent = "Pedir";
+    pedir.disabled = produto.estoque <= 0;
+    pedir.addEventListener("click", () =>
+      enviarMensagem(`Quero comprar o ${produto.nome} (id ${produto.id}).`)
+    );
+
+    cartao.append(foto, texto, pedir);
+    caixa.appendChild(cartao);
+  });
+
+  anexarBolha(caixa, false);
 }
 
 // O aviso de status e a resposta da Lu são os dois "assistant", porque os
@@ -69,17 +200,15 @@ function ehNotificacao(mensagem) {
 }
 
 function renderNotificacao(content) {
-  const bubble = document.createElement("div");
-  bubble.className = "bubble notificacao";
+  marcarDia("Hoje");
+  ultimoAutor = null;
 
+  const bubble = criarBalao("notificacao", content, agora());
   const rotulo = document.createElement("span");
   rotulo.className = "notificacao-rotulo";
   rotulo.textContent = "Atualização do pedido";
+  bubble.prepend(rotulo);
 
-  const texto = document.createElement("span");
-  texto.textContent = content;
-
-  bubble.append(rotulo, texto);
   // Chega sozinha, sem o usuário ter pedido: só puxa a rolagem se ele já
   // estiver no fim da conversa, pra não tirar da tela o que ele está lendo.
   anexarBolha(bubble, false);
@@ -106,6 +235,7 @@ async function enviarMensagem(texto) {
       body: JSON.stringify({ content: texto }),
     });
     renderMessage("assistant", dados.reply);
+    renderCartoesProduto(dados.produtos);
   } catch (err) {
     renderError(err.message);
   } finally {
@@ -127,9 +257,15 @@ async function loadHistory() {
     // Redesenha do zero: a notificação que o poll já pôs na tela também está
     // gravada no histórico, e sem limpar ela apareceria duas vezes.
     messagesEl.innerHTML = "";
+    ultimaData = null;
+    ultimoAutor = null;
     history.forEach((m) => {
-      if (ehNotificacao(m)) renderNotificacao(m.content);
-      else renderMessage(m.role, m.content);
+      if (ehNotificacao(m)) {
+        renderNotificacao(m.content);
+      } else {
+        renderMessage(m.role, m.content);
+        renderCartoesProduto(m.produtos);
+      }
     });
   } catch (err) {
     renderError("Não foi possível carregar o histórico.");
@@ -174,47 +310,60 @@ function criarBotao(rotulo, aoClicar, classe = "botao-secundario") {
 // --- Catálogo ---------------------------------------------------------------
 
 function criarCardProduto(produto) {
-  const card = document.createElement("div");
-  card.className = "card";
+  const card = document.createElement("article");
+  card.className = "produto";
 
-  const titulo = document.createElement("h3");
-  titulo.textContent = produto.nome;
-  card.appendChild(titulo);
+  const foto = document.createElement("img");
+  foto.className = "produto-foto";
+  foto.src = produto.imagem;
+  foto.alt = produto.nome;
+  foto.loading = "lazy";
+  card.appendChild(foto);
 
-  card.appendChild(criarLinha(produto.descricao, "card-secundario"));
-  card.appendChild(
-    criarLinha(
-      `${moeda.format(produto.preco)} · ${produto.prazo_entrega_dias} dia(s) · ⭐ ${produto.avaliacao}`,
-      "card-info"
-    )
-  );
+  const corpo = document.createElement("div");
+  corpo.className = "produto-corpo";
 
-  const estoque = criarLinha(
-    produto.estoque > 0 ? `${produto.estoque} em estoque` : "Sem estoque",
-    produto.estoque > 0 ? "card-info" : "card-alerta"
-  );
-  card.appendChild(estoque);
+  const nome = document.createElement("h3");
+  nome.className = "produto-nome";
+  nome.textContent = produto.nome;
+
+  const preco = document.createElement("p");
+  preco.className = "produto-preco";
+  preco.textContent = moeda.format(produto.preco);
+
+  const meta = document.createElement("p");
+  meta.className = "produto-meta";
+  meta.textContent = `${produto.prazo_entrega_dias} dia(s) \u00b7 \u2b50 ${produto.avaliacao}`;
+
+  const estoque = document.createElement("p");
+  estoque.className = produto.estoque > 0 ? "produto-meta" : "produto-meta produto-esgotado";
+  estoque.textContent = produto.estoque > 0 ? `${produto.estoque} em estoque` : "Sem estoque";
+
+  corpo.append(nome, preco, meta, estoque);
 
   const acoes = document.createElement("div");
-  acoes.className = "card-acoes";
+  acoes.className = "produto-acoes";
   const pedir = criarBotao(
     "Pedir",
     () => {
       alternarPainel(catalogoPanelEl, catalogoToggleEl);
-      enviarMensagem(`Quero comprar o produto "${produto.nome}" (id ${produto.id}).`);
+      enviarMensagem(`Quero comprar o ${produto.nome} (id ${produto.id}).`);
     },
     "botao-primario"
   );
   pedir.disabled = produto.estoque <= 0;
-  acoes.appendChild(pedir);
-  acoes.appendChild(
+  acoes.append(
+    pedir,
     criarBotao("Saber mais", () => {
       alternarPainel(catalogoPanelEl, catalogoToggleEl);
-      enviarMensagem(`Me explica o que devo olhar antes de escolher um ${produto.categoria.replace(/-/g, " ")}.`);
+      enviarMensagem(
+        `Me explica o que devo olhar antes de escolher um ${produto.categoria.replace(/-/g, " ")}.`
+      );
     })
   );
-  card.appendChild(acoes);
+  corpo.appendChild(acoes);
 
+  card.appendChild(corpo);
   return card;
 }
 

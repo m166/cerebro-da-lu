@@ -192,6 +192,10 @@ def _montar_catalogo():
                     "avaliacao": avaliacao,
                     "estoque": estoque,
                     "descricao": descricao,
+                    # Ilustração por categoria: o catálogo é mockado e não tem
+                    # foto de produto. Trocar por foto real é substituir o
+                    # arquivo em static/img/ mantendo o nome da categoria.
+                    "imagem": f"/static/img/{categoria}.svg",
                 }
             )
     return produtos

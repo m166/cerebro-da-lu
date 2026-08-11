@@ -5,6 +5,7 @@ chamar. Só o texto final (user/assistant) é persistido; as chamadas de
 ferramenta ficam fora do histórico salvo.
 """
 
+import json
 import math
 import re
 from typing import List, Optional
@@ -55,7 +56,39 @@ def _instrucoes() -> str:
     )
 
 
-def responder(mensagem_do_usuario: str) -> str:
+def _produtos_citados(resultado_json: str, encontrados: List[dict]) -> None:
+    """Coleta os produtos que a ferramenta devolveu, pra virarem card na tela.
+
+    A resposta do modelo é texto, e texto não mostra foto nem preço em
+    destaque. Guardando o que as ferramentas retornaram, a interface
+    consegue montar o cartão do produto ao lado da frase dele.
+    """
+    try:
+        dados = json.loads(resultado_json)
+    except (TypeError, ValueError):
+        return
+    if not isinstance(dados, dict):
+        return
+
+    candidatos = []
+    if isinstance(dados.get("produto"), dict):
+        candidatos.append(dados["produto"])
+    if isinstance(dados.get("produtos"), list):
+        candidatos.extend(p for p in dados["produtos"] if isinstance(p, dict))
+    if isinstance(dados.get("produto_id"), int):
+        do_catalogo = repositories.obter_produto(dados["produto_id"])
+        if do_catalogo:
+            candidatos.append(do_catalogo)
+
+    ja_tem = {p["id"] for p in encontrados}
+    for produto in candidatos:
+        if "id" in produto and "imagem" in produto and produto["id"] not in ja_tem:
+            encontrados.append(produto)
+            ja_tem.add(produto["id"])
+
+
+def responder(mensagem_do_usuario: str) -> dict:
+    """Devolve o texto da Lu e os produtos que ela consultou pra respondê-lo."""
     repositories.inserir_mensagem("user", mensagem_do_usuario)
 
     conversa: List[dict] = [{"role": "system", "content": _instrucoes()}]
@@ -67,6 +100,7 @@ def responder(mensagem_do_usuario: str) -> str:
     )
 
     client = get_client()
+    produtos: List[dict] = []
 
     for _ in range(config.MAX_TOOL_ITERATIONS):
         try:
@@ -87,8 +121,11 @@ def responder(mensagem_do_usuario: str) -> str:
 
         if not message.tool_calls:
             resposta = message.content
-            repositories.inserir_mensagem("assistant", resposta)
-            return resposta
+            citados = produtos[: config.MAX_PRODUTOS_NA_RESPOSTA]
+            repositories.inserir_mensagem(
+                "assistant", resposta, produtos=[p["id"] for p in citados]
+            )
+            return {"reply": resposta, "produtos": citados}
 
         conversa.append(
             {
@@ -98,13 +135,15 @@ def responder(mensagem_do_usuario: str) -> str:
             }
         )
         for tool_call in message.tool_calls:
+            resultado = tools.executar_json(
+                tool_call.function.name, tool_call.function.arguments
+            )
+            _produtos_citados(resultado, produtos)
             conversa.append(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
-                    "content": tools.executar_json(
-                        tool_call.function.name, tool_call.function.arguments
-                    ),
+                    "content": resultado,
                 }
             )
 
@@ -114,4 +153,10 @@ def responder(mensagem_do_usuario: str) -> str:
 
 
 def historico() -> List[dict]:
-    return repositories.listar_mensagens()
+    """Histórico pronto pra tela: os ids guardados viram produto completo."""
+    mensagens = repositories.listar_mensagens()
+    for mensagem in mensagens:
+        ids = mensagem.get("produtos") or []
+        completos = (repositories.obter_produto(i) for i in ids)
+        mensagem["produtos"] = [p for p in completos if p]
+    return mensagens

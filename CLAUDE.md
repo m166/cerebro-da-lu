@@ -126,6 +126,26 @@ Atenção: o entrypoint é `app.main:app` (não `main:app`).
   pergunta X traz o documento Y**, isso mede o encoder falso, não o
   sistema. Qualidade semântica se verifica manualmente, com o modelo real.
 
+## Imagens dos produtos
+
+`static/img/<categoria>.svg` tem uma ilustração por categoria, e o produto
+expõe o caminho em `imagem`. São vetores porque o catálogo é mockado e não
+existe foto: pesam pouco, não borram e funcionam offline. **Trocar por foto
+real é substituir o arquivo mantendo o nome da categoria**, sem tocar em
+código. Categoria nova sem arquivo deixa a imagem quebrada, então crie o
+SVG junto.
+
+## Texto da Lu na tela
+
+A tela **não renderiza markdown**, só converte `**negrito**`. Tabela com
+barras e lista com `#` aparecem cruas pro cliente, e a persona proíbe
+tabela por isso. Os produtos que as ferramentas consultarem viram cartão
+com foto e preço automaticamente (`ChatResponse.produtos`), então a Lu não
+precisa repetir ficha técnica em texto.
+
+Os ids dos produtos citados ficam gravados na coluna `messages.produtos`.
+Sem isso o cartão só existia no envio ao vivo e sumia ao recarregar.
+
 ## Validando a UI sem driver de browser
 
 Não há playwright nem node no ambiente, mas o Chrome instalado tira
@@ -143,6 +163,13 @@ Headless não clica, então os painéis são alcançados pela URL:
 `#catalogo` e `#pedidos` abrem o painel correspondente no carregamento.
 Pra conferir o tema claro, acrescente
 `--blink-settings=preferredColorScheme=1`.
+
+**Cuidado com `--window-size` abaixo de 500.** O Chrome headless tem
+largura mínima de 500px e ignora valores menores: o print sai cortado em
+390 e parece transbordamento de layout, mas a página nunca foi renderizada
+nessa largura. Já perdi tempo "consertando" um bug que não existia. Pra
+testar tela estreita de verdade, sirva uma página com a app dentro de um
+`<iframe>` da largura desejada e fotografe essa página.
 
 ## Testes x avaliação
 

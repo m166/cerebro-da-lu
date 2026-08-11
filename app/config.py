@@ -29,6 +29,10 @@ MAX_TOOL_ITERATIONS = 6
 # mais de 100 itens e mandar todos estouraria o contexto sem necessidade.
 LIMITE_BUSCA_TOOL = 8
 
+# Quantos cartões de produto acompanham uma resposta no chat. Acima disso a
+# conversa vira vitrine e o texto da Lu se perde no meio.
+MAX_PRODUTOS_NA_RESPOSTA = 4
+
 # Quantas mensagens do histórico vão pro modelo. O histórico completo
 # continua no banco e na tela; o que é enviado precisa ser limitado porque
 # a conta free da Groq trabalha com 8000 tokens por minuto, e reenviar a

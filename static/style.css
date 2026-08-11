@@ -1,37 +1,59 @@
 :root {
   color-scheme: light dark;
-  --bg: #f4f5f7;
-  --panel: #ffffff;
-  --text: #1a1a1a;
-  --muted: #6b7280;
-  --user-bubble: #2563eb;
-  --user-text: #ffffff;
-  --assistant-bubble: #e5e7eb;
-  --assistant-text: #1a1a1a;
+  --bg: #eae6df;
+  --panel: #f7f5f2;
+  --topo: #ffffff;
+  --text: #111b21;
+  --muted: #667781;
+  --linha: rgba(17, 27, 33, 0.12);
+
+  --user-bubble: #d9fdd3;
+  --user-text: #111b21;
+  --assistant-bubble: #ffffff;
+  --assistant-text: #111b21;
   --error-bubble: #fee2e2;
   --error-text: #991b1b;
-  --aviso-bubble: #e8effd;
-  --aviso-text: #1e3a8a;
-  --aviso-borda: #93b4f7;
+
+  --marca: #1d6f5c;
+  --acento: #2563eb;
+
+  --aviso-bubble: #fff5d6;
+  --aviso-text: #6b4e00;
+  --aviso-borda: #e6c34a;
   --acento-suave: rgba(37, 99, 235, 0.22);
-  --trilho: rgba(128, 128, 128, 0.3);
+  --trilho: rgba(17, 27, 33, 0.18);
+
+  --fundo-conversa: #efe7de;
+  --sombra: 0 1px 1px rgba(11, 20, 26, 0.13);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --text: #e6e6e6;
-    --muted: #9ca3af;
-    --assistant-bubble: #262b36;
-    --assistant-text: #e6e6e6;
+    --bg: #0b141a;
+    --panel: #111b21;
+    --topo: #202c33;
+    --text: #e9edef;
+    --muted: #8696a0;
+    --linha: rgba(233, 237, 239, 0.12);
+
+    --user-bubble: #005c4b;
+    --user-text: #e9edef;
+    --assistant-bubble: #202c33;
+    --assistant-text: #e9edef;
     --error-bubble: #3b1414;
     --error-text: #fca5a5;
-    --aviso-bubble: #16233d;
-    --aviso-text: #c3d8ff;
-    --aviso-borda: #35558f;
-    --acento-suave: rgba(96, 165, 250, 0.3);
-    --trilho: rgba(160, 160, 160, 0.28);
+
+    --marca: #00a884;
+    --acento: #53bdeb;
+
+    --aviso-bubble: #2a2416;
+    --aviso-text: #f5d980;
+    --aviso-borda: #6b5a1f;
+    --acento-suave: rgba(83, 189, 235, 0.28);
+    --trilho: rgba(233, 237, 239, 0.2);
+
+    --fundo-conversa: #0b141a;
+    --sombra: 0 1px 1px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -51,54 +73,109 @@ body {
 
 .chat {
   width: 100%;
-  max-width: 720px;
+  max-width: 860px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--panel);
+  /* Item flex não encolhe abaixo do conteúdo mínimo dos filhos sem isto, e
+     era o que empurrava a tela pra fora no celular. */
+  min-width: 0;
 }
 
+/* --- Cabeçalho ---------------------------------------------------------- */
+
 .chat-header {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  padding: 0.6rem 1rem;
+  min-width: 0;
+  background: var(--topo);
+  border-bottom: 1px solid var(--linha);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.chat-header h1 {
-  margin: 0;
-  font-size: 1.1rem;
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--marca);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.avatar-pequeno {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.7rem;
+}
+
+.perfil-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.perfil-texto strong {
+  font-size: 1rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perfil-texto small {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .painel-abas {
   display: flex;
   gap: 0.4rem;
+  flex: 0 0 auto;
 }
 
 .aba {
   padding: 0.4rem 0.8rem;
-  border-radius: 0.6rem;
-  border: 1px solid rgba(128, 128, 128, 0.3);
-  background: var(--bg);
+  border-radius: 999px;
+  border: 1px solid var(--linha);
+  background: transparent;
   color: var(--text);
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .aba:hover {
-  opacity: 0.85;
+  background: var(--bg);
 }
 
 .aba.ativa {
-  background: var(--user-bubble);
-  border-color: var(--user-bubble);
+  background: var(--marca);
+  border-color: var(--marca);
   color: #fff;
 }
 
+/* --- Painéis ------------------------------------------------------------ */
+
 .painel {
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-  max-height: 45vh;
+  border-bottom: 1px solid var(--linha);
+  background: var(--panel);
+  max-height: 52vh;
   overflow-y: auto;
   padding: 0.75rem 1rem;
 }
@@ -117,9 +194,9 @@ body {
 
 .painel-filtros select,
 .painel-filtros input {
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.6rem;
-  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--linha);
   background: var(--bg);
   color: var(--text);
   font-size: 0.85rem;
@@ -135,20 +212,316 @@ body {
   color: var(--muted);
 }
 
+/* --- Vitrine do catálogo ------------------------------------------------ */
+
+.vitrine {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 0.75rem;
+}
+
+.produto {
+  border: 1px solid var(--linha);
+  border-radius: 0.9rem;
+  background: var(--topo);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--sombra);
+}
+
+.produto-foto {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  background: var(--bg);
+}
+
+.produto-corpo {
+  padding: 0.6rem 0.7rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.produto-nome {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.produto-preco {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--marca);
+}
+
+@media (prefers-color-scheme: dark) {
+  .produto-preco {
+    color: var(--acento);
+  }
+}
+
+.produto-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.produto-esgotado {
+  color: var(--error-text);
+  font-weight: 600;
+}
+
+.produto-acoes {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+
+/* --- Conversa ------------------------------------------------------------ */
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background-color: var(--fundo-conversa);
+  /* Trama discreta no lugar do fundo chapado, como num app de mensagem. */
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.separador-data {
+  align-self: center;
+  margin: 0.6rem 0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--topo);
+  color: var(--muted);
+  font-size: 0.72rem;
+  box-shadow: var(--sombra);
+}
+
+.linha-mensagem {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+  /* Some o avatar e o espaçamento da conta: sem isso, 82% mais o avatar
+     estouravam a largura da tela no celular. */
+  max-width: min(82%, calc(100% - 2.5rem));
+  min-width: 0;
+}
+
+.linha-mensagem.de-mim {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.linha-mensagem.da-lu {
+  align-self: flex-start;
+}
+
+.linha-mensagem .avatar {
+  visibility: hidden;
+}
+
+.linha-mensagem.mostra-avatar .avatar {
+  visibility: visible;
+}
+
+.bubble {
+  position: relative;
+  padding: 0.45rem 0.7rem 1.15rem;
+  border-radius: 0.6rem;
+  line-height: 1.45;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: var(--sombra);
+  min-width: 4.5rem;
+  max-width: 100%;
+}
+
+.bubble.user {
+  background: var(--user-bubble);
+  color: var(--user-text);
+  border-top-right-radius: 0.15rem;
+}
+
+.bubble.assistant {
+  background: var(--assistant-bubble);
+  color: var(--assistant-text);
+  border-top-left-radius: 0.15rem;
+}
+
+/* Rabicho do balão, o detalhe que dá a cara de app de mensagem. */
+.bubble.user::after,
+.bubble.assistant::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 0;
+  height: 0;
+  border: 0.5rem solid transparent;
+}
+
+.bubble.user::after {
+  right: -0.45rem;
+  border-top-color: var(--user-bubble);
+  border-left-color: var(--user-bubble);
+}
+
+.bubble.assistant::after {
+  left: -0.45rem;
+  border-top-color: var(--assistant-bubble);
+  border-right-color: var(--assistant-bubble);
+}
+
+.hora {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.35rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.tique {
+  color: var(--acento);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.bubble.error {
+  align-self: center;
+  background: var(--error-bubble);
+  color: var(--error-text);
+  font-size: 0.85rem;
+  padding-bottom: 0.45rem;
+  box-shadow: none;
+}
+
+.bubble.error::after {
+  display: none;
+}
+
+/* --- Aviso de pedido ------------------------------------------------------ */
+
+.bubble.notificacao {
+  background: var(--aviso-bubble);
+  color: var(--aviso-text);
+  border: 1px solid var(--aviso-borda);
+  border-left-width: 4px;
+  padding-bottom: 1.15rem;
+}
+
+.bubble.notificacao::after {
+  display: none;
+}
+
+.notificacao-rotulo {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+  opacity: 0.85;
+}
+
+/* --- Cartão de produto dentro da conversa --------------------------------- */
+
+.cartoes-produto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-self: flex-start;
+  max-width: min(82%, calc(100% - 2.5rem));
+  margin-left: 2.2rem;
+  margin-bottom: 0.35rem;
+}
+
+.cartao-produto {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 0.6rem;
+  background: var(--assistant-bubble);
+  box-shadow: var(--sombra);
+  border-left: 3px solid var(--marca);
+}
+
+.cartao-produto img {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 0.5rem;
+  flex: 0 0 auto;
+  background: var(--bg);
+}
+
+.cartao-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.cartao-nome {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cartao-preco {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--marca);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cartao-preco {
+    color: var(--acento);
+  }
+}
+
+.cartao-meta {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* --- Cards de pedido ------------------------------------------------------ */
+
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 0.75rem;
 }
 
 .card {
-  border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
+  border: 1px solid var(--linha);
+  border-radius: 0.9rem;
+  padding: 0.8rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  background: var(--bg);
+  background: var(--topo);
+  box-shadow: var(--sombra);
 }
 
 .card h3 {
@@ -186,11 +559,11 @@ body {
 
 .selo {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
-  border-radius: 0.4rem;
-  background: var(--assistant-bubble);
-  color: var(--assistant-text);
-  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--marca);
+  color: #fff;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -210,8 +583,8 @@ body {
 }
 
 .rastreio-codigo {
-  padding: 0.15rem 0.4rem;
-  border: 1px dashed var(--aviso-borda);
+  padding: 0.15rem 0.45rem;
+  border: 1px dashed var(--trilho);
   border-radius: 0.4rem;
   background: transparent;
   color: var(--text);
@@ -219,16 +592,13 @@ body {
   font-size: 0.78rem;
   letter-spacing: 0.03em;
   cursor: pointer;
-  /* Se a cópia automática for bloqueada pelo navegador, um duplo clique
-     ainda seleciona o código inteiro. */
   -webkit-user-select: all;
   user-select: all;
 }
 
 .rastreio-codigo:hover {
   border-style: solid;
-  background: var(--aviso-bubble);
-  color: var(--aviso-text);
+  background: var(--bg);
 }
 
 .rastreio-copiado {
@@ -244,7 +614,7 @@ body {
   display: flex;
   align-items: center;
   list-style: none;
-  margin: 0.2rem 0 0;
+  margin: 0.3rem 0 0;
   padding: 0 0.35rem;
 }
 
@@ -271,7 +641,7 @@ body {
 
 .etapa.feita::before,
 .etapa.atual::before {
-  background: var(--user-bubble);
+  background: var(--marca);
 }
 
 .etapa-marca {
@@ -282,18 +652,16 @@ body {
 }
 
 .etapa.feita .etapa-marca {
-  background: var(--user-bubble);
+  background: var(--marca);
 }
 
 .etapa.atual .etapa-marca {
   width: 0.7rem;
   height: 0.7rem;
-  background: var(--user-bubble);
+  background: var(--marca);
   box-shadow: 0 0 0 0.22rem var(--acento-suave);
 }
 
-/* O nome da etapa fica só para leitor de tela: no card cabem os cinco
-   pontos, mas não os cinco rótulos. A etapa atual aparece na legenda. */
 .etapa-nome {
   position: absolute;
   width: 1px;
@@ -316,29 +684,32 @@ body {
   margin-top: 0.25rem;
 }
 
+/* --- Botões --------------------------------------------------------------- */
+
 .botao-primario,
 .botao-secundario {
-  padding: 0.4rem 0.65rem;
-  border-radius: 0.6rem;
-  font-size: 0.8rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
 .botao-primario {
   border: none;
-  background: var(--user-bubble);
+  background: var(--marca);
   color: #fff;
+  font-weight: 600;
 }
 
 .botao-secundario {
-  border: 1px solid rgba(128, 128, 128, 0.35);
+  border: 1px solid var(--linha);
   background: transparent;
   color: var(--text);
 }
 
 .botao-primario:hover,
 .botao-secundario:hover {
-  opacity: 0.85;
+  opacity: 0.88;
 }
 
 .botao-primario:disabled,
@@ -347,98 +718,28 @@ body {
   cursor: not-allowed;
 }
 
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.bubble {
-  max-width: 75%;
-  padding: 0.55rem 0.85rem;
-  border-radius: 1rem;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.bubble.user {
-  align-self: flex-end;
-  background: var(--user-bubble);
-  color: var(--user-text);
-  border-bottom-right-radius: 0.25rem;
-}
-
-.bubble.assistant {
-  align-self: flex-start;
-  background: var(--assistant-bubble);
-  color: var(--assistant-text);
-  border-bottom-left-radius: 0.25rem;
-}
-
-.bubble.error {
-  align-self: center;
-  background: var(--error-bubble);
-  color: var(--error-text);
-  font-size: 0.9rem;
-}
-
-/* Aviso do sistema, não resposta da Lu: ocupa a linha inteira, tem rótulo
-   próprio e barra lateral, pra não se confundir com a bolha de conversa. */
-.bubble.notificacao {
-  align-self: stretch;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--aviso-borda);
-  border-left-width: 4px;
-  border-radius: 0.5rem;
-  background: var(--aviso-bubble);
-  color: var(--aviso-text);
-  font-size: 0.85rem;
-}
-
-.notificacao-rotulo {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.75;
-}
-
-.conexao-aviso {
-  margin: 0;
-  padding: 0.4rem 1rem;
-  background: var(--error-bubble);
-  color: var(--error-text);
-  font-size: 0.76rem;
-  text-align: center;
-}
-
-.conexao-aviso[hidden] {
-  display: none;
-}
+/* --- Digitando e conexão --------------------------------------------------- */
 
 .digitando {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0 1rem 0.5rem;
+  gap: 0.45rem;
+  padding: 0 1.25rem 0.5rem;
+  background: var(--fundo-conversa);
 }
 
 .digitando[hidden] {
   display: none;
 }
 
-.digitando-texto {
-  margin-left: 0.3rem;
-  font-size: 0.8rem;
-  color: var(--muted);
+.digitando-balao {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--assistant-bubble);
+  box-shadow: var(--sombra);
 }
 
 .ponto {
@@ -469,43 +770,92 @@ body {
   }
 }
 
-.chat-form {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border-top: 1px solid rgba(128, 128, 128, 0.2);
+.conexao-aviso {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  background: var(--error-bubble);
+  color: var(--error-text);
+  font-size: 0.78rem;
+  text-align: center;
 }
 
-.chat-form input:disabled,
-.chat-form button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.conexao-aviso[hidden] {
+  display: none;
+}
+
+/* --- Campo de mensagem ------------------------------------------------------ */
+
+.chat-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--topo);
+  border-top: 1px solid var(--linha);
 }
 
 .chat-form input {
   flex: 1;
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
   background: var(--bg);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .chat-form input:focus {
-  outline: 2px solid var(--user-bubble);
+  outline: none;
+  border-color: var(--marca);
 }
 
 .chat-form button {
-  padding: 0.6rem 1.1rem;
-  border-radius: 0.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
   border: none;
-  background: var(--user-bubble);
-  color: white;
-  font-size: 1rem;
+  background: var(--marca);
+  color: #fff;
   cursor: pointer;
 }
 
 .chat-form button:hover {
   opacity: 0.9;
+}
+
+.chat-form input:disabled,
+.chat-form button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .messages {
+    padding: 0.75rem;
+  }
+
+  .linha-mensagem,
+  .cartoes-produto {
+    max-width: calc(100% - 2.2rem);
+  }
+
+  .cartoes-produto {
+    margin-left: 2.2rem;
+  }
+
+  .digitando {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .vitrine {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .perfil-texto small {
+    display: none;
+  }
 }

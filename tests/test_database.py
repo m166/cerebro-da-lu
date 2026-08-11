@@ -85,7 +85,7 @@ def test_migracao_preserva_os_dados(banco_antigo):
     assert pedido["produto_nome"] == "Notebook Titan X15"
     assert pedido["endereco_entrega"] == "Rua Antiga, 1"
     assert pedido["codigo_rastreio"] is None
-    assert repositories.listar_mensagens() == [{"role": "user", "content": "oi", "tipo": "chat"}]
+    assert repositories.listar_mensagens() == [{"role": "user", "content": "oi", "tipo": "chat", "produtos": []}]
 
 
 def test_migracao_e_idempotente(banco_antigo):
@@ -103,7 +103,7 @@ def test_migracao_repetida_nao_mexe_nos_dados(banco_antigo):
     pedidos = repositories.listar_pedidos()
     assert len(pedidos) == 1
     assert pedidos[0]["produto_nome"] == "Notebook Titan X15"
-    assert repositories.listar_mensagens() == [{"role": "user", "content": "oi", "tipo": "chat"}]
+    assert repositories.listar_mensagens() == [{"role": "user", "content": "oi", "tipo": "chat", "produtos": []}]
 
 
 def test_migracao_parcial_completa_so_o_que_falta(tmp_path, monkeypatch):

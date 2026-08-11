@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS messages (
     role TEXT NOT NULL,
     content TEXT NOT NULL,
     tipo TEXT NOT NULL DEFAULT 'chat',
+    produtos TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 """
@@ -61,7 +62,12 @@ COLUNAS_ADICIONADAS = {
         ("codigo_rastreio", "TEXT"),
         ("status_notificado", "TEXT"),
     ),
-    "messages": (("tipo", "TEXT NOT NULL DEFAULT 'chat'"),),
+    "messages": (
+        ("tipo", "TEXT NOT NULL DEFAULT 'chat'"),
+        # Ids dos produtos citados, em JSON. Sem isso o cartão do produto só
+        # existe no envio ao vivo e some quando a página recarrega.
+        ("produtos", "TEXT"),
+    ),
 }
 
 STATUS_INICIAL = "confirmado"

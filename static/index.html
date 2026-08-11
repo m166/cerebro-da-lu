@@ -9,7 +9,13 @@
 <body>
   <div class="chat">
     <header class="chat-header">
-      <h1>Cérebro da Lu</h1>
+      <div class="perfil">
+        <span class="avatar" aria-hidden="true">Lu</span>
+        <span class="perfil-texto">
+          <strong>Cérebro da Lu</strong>
+          <small>assistente de compras</small>
+        </span>
+      </div>
       <nav class="painel-abas">
         <button id="catalogo-toggle" class="aba" type="button" aria-expanded="false">Catálogo</button>
         <button id="pedidos-toggle" class="aba" type="button" aria-expanded="false">Pedidos</button>
@@ -25,7 +31,7 @@
         <button id="catalogo-comparar" class="botao-secundario" type="button" hidden>Comparar categoria</button>
         <span id="catalogo-contagem" class="painel-contagem"></span>
       </div>
-      <div id="catalogo-lista" class="cards"></div>
+      <div id="catalogo-lista" class="vitrine"></div>
     </div>
 
     <div id="pedidos-panel" class="painel hidden">
@@ -43,13 +49,19 @@
     </p>
 
     <div id="digitando" class="digitando" hidden>
-      <span class="ponto"></span><span class="ponto"></span><span class="ponto"></span>
-      <span class="digitando-texto">Lu está pensando...</span>
+      <span class="avatar avatar-pequeno" aria-hidden="true">Lu</span>
+      <span class="digitando-balao">
+        <span class="ponto"></span><span class="ponto"></span><span class="ponto"></span>
+      </span>
     </div>
 
     <form id="chat-form" class="chat-form">
-      <input id="chat-input" type="text" placeholder="Digite uma mensagem..." autocomplete="off" autofocus>
-      <button id="chat-enviar" type="submit">Enviar</button>
+      <input id="chat-input" type="text" placeholder="Mensagem" autocomplete="off" autofocus>
+      <button id="chat-enviar" type="submit" aria-label="Enviar mensagem">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M3 20.5l18-8.5L3 3.5V10l12 2-12 2z" fill="currentColor"/>
+        </svg>
+      </button>
     </form>
   </div>
   <script src="/static/script.js"></script>

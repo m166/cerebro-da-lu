@@ -5,6 +5,7 @@ Mensagens e pedidos vêm do SQLite; o catálogo vem do mock em
 escrita.
 """
 
+import json
 import unicodedata
 from typing import List, Optional
 
@@ -15,11 +16,16 @@ from app.database import get_connection
 
 # --- Mensagens ---------------------------------------------------------
 
-def inserir_mensagem(role: str, content: str, tipo: str = models.TIPO_CHAT) -> None:
+def inserir_mensagem(
+    role: str,
+    content: str,
+    tipo: str = models.TIPO_CHAT,
+    produtos: Optional[List[int]] = None,
+) -> None:
     conn = get_connection()
     conn.execute(
-        "INSERT INTO messages (role, content, tipo) VALUES (?, ?, ?)",
-        (role, content, tipo),
+        "INSERT INTO messages (role, content, tipo, produtos) VALUES (?, ?, ?, ?)",
+        (role, content, tipo, json.dumps(produtos) if produtos else None),
     )
     conn.commit()
     conn.close()
@@ -31,19 +37,24 @@ def listar_mensagens(limite: Optional[int] = None) -> List[dict]:
     if limite:
         rows = conn.execute(
             """
-            SELECT role, content, tipo FROM (
-                SELECT id, role, content, tipo FROM messages ORDER BY id DESC LIMIT ?
+            SELECT role, content, tipo, produtos FROM (
+                SELECT id, role, content, tipo, produtos FROM messages ORDER BY id DESC LIMIT ?
             ) ORDER BY id
             """,
             (limite,),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT role, content, tipo FROM messages ORDER BY id"
+            "SELECT role, content, tipo, produtos FROM messages ORDER BY id"
         ).fetchall()
     conn.close()
     return [
-        {"role": row["role"], "content": row["content"], "tipo": row["tipo"]}
+        {
+            "role": row["role"],
+            "content": row["content"],
+            "tipo": row["tipo"],
+            "produtos": json.loads(row["produtos"]) if row["produtos"] else [],
+        }
         for row in rows
     ]
 
