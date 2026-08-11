@@ -1,0 +1,29 @@
+# Não validado: este repositório ainda não tem remote, então o workflow nunca
+# rodou. Confira a primeira execução depois de publicar no GitHub.
+name: testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependências
+        # numpy<2 existe por causa do torch de Python 3.9 e não se aplica aqui.
+        run: |
+          sed '/^numpy<2$/d' requirements.txt > req-ci.txt
+          pip install -r req-ci.txt
+
+      - name: Rodar a suíte
+        # A suíte não chama a Groq nem baixa modelo de embedding, então não
+        # precisa de segredo nenhum e roda em segundos.
+        run: pytest -q

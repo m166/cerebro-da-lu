@@ -68,6 +68,16 @@ def banco_antigo(tmp_path, monkeypatch):
     return caminho
 
 
+def _migrar_e_adotar():
+    """Roda o que o app roda ao abrir: migra o schema e adota o que estava
+    gravado antes das sessões existirem."""
+    from app import sessao
+    from app.database import adotar_dados_orfaos
+
+    init_db()
+    adotar_dados_orfaos(sessao.atual())
+
+
 def test_banco_antigo_nao_tem_as_colunas_novas(banco_antigo):
     colunas = _colunas(banco_antigo, "pedidos")
     assert "codigo_rastreio" not in colunas
@@ -80,7 +90,7 @@ def test_init_db_acrescenta_as_colunas_que_faltam(banco_antigo):
 
 
 def test_migracao_preserva_os_dados(banco_antigo):
-    init_db()
+    _migrar_e_adotar()
     pedido = repositories.obter_pedido(1)
     assert pedido["produto_nome"] == "Notebook Titan X15"
     assert pedido["endereco_entrega"] == "Rua Antiga, 1"
@@ -98,7 +108,7 @@ def test_migracao_repetida_nao_mexe_nos_dados(banco_antigo):
     """ALTER TABLE repetido estouraria com "duplicate column name" e deixaria
     o commit pela metade."""
     for _ in range(3):
-        init_db()
+        _migrar_e_adotar()
 
     pedidos = repositories.listar_pedidos()
     assert len(pedidos) == 1
@@ -122,7 +132,7 @@ def test_migracao_parcial_completa_so_o_que_falta(tmp_path, monkeypatch):
     conn.close()
     monkeypatch.setattr(config, "DB_PATH", caminho)
 
-    init_db()
+    _migrar_e_adotar()
     assert {"codigo_rastreio", "status_notificado"} <= _colunas(caminho, "pedidos")
     assert repositories.obter_pedido(1)["codigo_rastreio"] == "LU000000014BR"
 
@@ -136,7 +146,7 @@ def test_migrar_colunas_ignora_tabela_que_nao_existe(tmp_path):
 
 
 def test_pedido_antigo_continua_funcionando(banco_antigo):
-    init_db()
+    _migrar_e_adotar()
     pedido = services.obter_pedido(1)
     assert pedido["codigo_rastreio"] == services.gerar_codigo_rastreio(1)
     assert pedido["status"] == "entregue"
@@ -149,7 +159,7 @@ def test_pedido_antigo_continua_funcionando(banco_antigo):
 def test_pedido_antigo_e_notificado_uma_vez_so(banco_antigo):
     """Linha migrada tem `status_notificado` nulo: nada foi comunicado ainda,
     então vale um aviso do estado atual, e só um."""
-    init_db()
+    _migrar_e_adotar()
     novas = services.sincronizar_notificacoes()
     assert len(novas) == 1
     assert "entregue" in novas[0]["content"]
@@ -159,7 +169,7 @@ def test_pedido_antigo_e_notificado_uma_vez_so(banco_antigo):
 def test_pedido_novo_em_banco_migrado(banco_antigo):
     """Migrar precisa deixar o banco pronto pra escrita também: o INSERT de
     pedido preenche `status_notificado`, coluna que não existia antes."""
-    init_db()
+    _migrar_e_adotar()
     pedido = services.criar_pedido(id_por_nome("Air Fryer 4L Digital"))
 
     assert pedido["codigo_rastreio"] == services.gerar_codigo_rastreio(pedido["id"])
@@ -177,7 +187,7 @@ def test_status_gravado_por_versao_antiga_nao_vaza_pro_rastreio(banco_antigo):
     conn.commit()
     conn.close()
 
-    init_db()
+    _migrar_e_adotar()
     assert services.obter_pedido(1)["status"] in models.ETAPAS_RASTREIO
     assert services.rastrear_pedido(1)["etapa_atual"] in models.ETAPAS_RASTREIO
     assert services.rastrear_pedido(1)["localizacao"] != "Desconhecida"

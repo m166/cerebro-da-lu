@@ -2,12 +2,15 @@ from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from app import config
+from app import config, sessao
 from app.database import get_connection
 from app.main import app
 from tests.conftest import id_por_nome, resposta_do_modelo, tool_call_falso
 
-client = TestClient(app)
+# Sessão fixa: as requisições passam pelo middleware, que criaria uma sessão
+# nova a cada execução, enquanto os testes também escrevem direto pelos
+# repositories. Fixando o cookie, os dois caminhos falam da mesma conversa.
+client = TestClient(app, cookies={sessao.NOME_DO_COOKIE: sessao.atual()})
 
 
 def _envelhecer(pedido_id, segundos):
@@ -215,7 +218,7 @@ def test_notificacoes_nao_avisa_pedido_recem_criado():
 def test_notificacoes_avisa_entra_no_historico_e_nao_repete(monkeypatch):
     """Escala zero derruba o pedido direto em "entregue", é o jeito de fazer
     o tempo passar sem o teste ficar esperando o relógio."""
-    from app import config
+    from app import config, sessao
 
     criado = client.post(
         "/api/pedidos", json={"produto_id": id_por_nome("Air Fryer 4L Digital")}
@@ -362,7 +365,7 @@ def test_chat_envia_so_a_janela_do_historico(groq_falso, monkeypatch):
 
 
 def test_chat_desiste_apos_limite_de_tool_calls(groq_falso, monkeypatch):
-    from app import config
+    from app import config, sessao
 
     monkeypatch.setattr(config, "MAX_TOOL_ITERATIONS", 2)
     chamada = tool_call_falso("listar_categorias", "{}")
@@ -461,3 +464,64 @@ def test_mensagem_do_cliente_nao_carrega_produto(groq_falso):
     historico = client.get("/api/history").json()
     assert historico[0]["role"] == "user"
     assert historico[0]["produtos"] == []
+
+
+# --- Isolamento entre visitantes -------------------------------------------
+
+def _cliente(sessao_id):
+    return TestClient(app, cookies={sessao.NOME_DO_COOKIE: sessao_id})
+
+
+def test_conversa_de_um_visitante_nao_vaza_pro_outro(groq_falso):
+    """Antes das sessões o histórico era global: qualquer pessoa que abrisse
+    o endereço lia a conversa de quem tinha usado antes."""
+    ana, bruno = _cliente("sessao-ana"), _cliente("sessao-bruno")
+
+    groq_falso(resposta_do_modelo(content="Oi, Ana!"))
+    ana.post("/api/chat", json={"content": "meu nome e Ana"})
+
+    assert [m["content"] for m in ana.get("/api/history").json()] == [
+        "meu nome e Ana",
+        "Oi, Ana!",
+    ]
+    assert bruno.get("/api/history").json() == []
+
+
+def test_pedido_de_um_visitante_nao_aparece_pro_outro():
+    ana, bruno = _cliente("sessao-ana"), _cliente("sessao-bruno")
+    produto_id = id_por_nome("Smartphone Nova 5G")
+
+    criado = ana.post("/api/pedidos", json={"produto_id": produto_id})
+    pedido_id = criado.json()["id"]
+
+    assert len(ana.get("/api/pedidos").json()) == 1
+    assert bruno.get("/api/pedidos").json() == []
+    # Nem pelo id direto: adivinhar o número não pode abrir o pedido alheio.
+    assert bruno.get(f"/api/pedidos/{pedido_id}").status_code == 404
+
+
+def test_cadastro_nao_vaza_entre_visitantes():
+    ana, bruno = _cliente("sessao-ana"), _cliente("sessao-bruno")
+    produto_id = id_por_nome("Smartphone Nova 5G")
+
+    ana.post("/api/pedidos", json={"produto_id": produto_id, "endereco_entrega": "Rua da Ana, 1"})
+    bruno.post("/api/pedidos", json={"produto_id": produto_id, "endereco_entrega": "Rua do Bruno, 2"})
+
+    assert ana.get("/api/pedidos").json()[0]["endereco_entrega"] == "Rua da Ana, 1"
+    assert bruno.get("/api/pedidos").json()[0]["endereco_entrega"] == "Rua do Bruno, 2"
+
+
+def test_visitante_sem_cookie_recebe_um():
+    resposta = TestClient(app).get("/api/history")
+    assert resposta.status_code == 200
+    assert sessao.NOME_DO_COOKIE in resposta.cookies
+
+
+def test_notificacao_so_avisa_o_dono_do_pedido():
+    ana, bruno = _cliente("sessao-ana"), _cliente("sessao-bruno")
+    produto_id = id_por_nome("Smartphone Nova 5G")
+    pedido_id = ana.post("/api/pedidos", json={"produto_id": produto_id}).json()["id"]
+    _envelhecer(pedido_id, segundos=config.SEGUNDOS_POR_DIA_ENTREGA * 30)
+
+    assert bruno.get("/api/notificacoes").json()["novas"] == []
+    assert ana.get("/api/notificacoes").json()["novas"]

@@ -14,6 +14,7 @@ TIPO_NOTIFICACAO = "notificacao"
 CREATE_MESSAGES = """
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sessao_id TEXT,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
     tipo TEXT NOT NULL DEFAULT 'chat',
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE_PEDIDOS = """
 CREATE TABLE IF NOT EXISTS pedidos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sessao_id TEXT,
     produto_id INTEGER NOT NULL,
     produto_nome TEXT NOT NULL,
     quantidade INTEGER NOT NULL,
@@ -44,9 +46,13 @@ CREATE TABLE IF NOT EXISTS pedidos (
 # mensagem.
 CREATE_PERFIL = """
 CREATE TABLE IF NOT EXISTS perfil (
-    chave TEXT PRIMARY KEY,
+    -- Aceita NULL de propósito: linha migrada de antes das sessões nasce
+    -- órfã e é adotada no primeiro acesso, igual a mensagem e pedido.
+    sessao_id TEXT,
+    chave TEXT NOT NULL,
     valor TEXT NOT NULL,
-    atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (sessao_id, chave)
 )
 """
 
@@ -61,14 +67,21 @@ COLUNAS_ADICIONADAS = {
     "pedidos": (
         ("codigo_rastreio", "TEXT"),
         ("status_notificado", "TEXT"),
+        ("sessao_id", "TEXT"),
     ),
     "messages": (
         ("tipo", "TEXT NOT NULL DEFAULT 'chat'"),
         # Ids dos produtos citados, em JSON. Sem isso o cartão do produto só
         # existe no envio ao vivo e some quando a página recarrega.
         ("produtos", "TEXT"),
+        ("sessao_id", "TEXT"),
     ),
 }
+
+# A tabela `perfil` mudou de chave primária (de `chave` pra
+# `sessao_id + chave`), e SQLite não altera PK com ALTER TABLE. Quem tem o
+# schema antigo precisa da tabela reconstruída, não de uma coluna a mais.
+PERFIL_ANTIGO = "perfil_sem_sessao"
 
 STATUS_INICIAL = "confirmado"
 

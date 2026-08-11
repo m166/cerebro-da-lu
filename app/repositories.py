@@ -9,7 +9,7 @@ import json
 import unicodedata
 from typing import List, Optional
 
-from app import models, vectorstore
+from app import models, sessao, vectorstore
 from app.data import catalogo
 from app.database import get_connection
 
@@ -24,8 +24,11 @@ def inserir_mensagem(
 ) -> None:
     conn = get_connection()
     conn.execute(
-        "INSERT INTO messages (role, content, tipo, produtos) VALUES (?, ?, ?, ?)",
-        (role, content, tipo, json.dumps(produtos) if produtos else None),
+        """
+        INSERT INTO messages (sessao_id, role, content, tipo, produtos)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (sessao.atual(), role, content, tipo, json.dumps(produtos) if produtos else None),
     )
     conn.commit()
     conn.close()
@@ -38,14 +41,16 @@ def listar_mensagens(limite: Optional[int] = None) -> List[dict]:
         rows = conn.execute(
             """
             SELECT role, content, tipo, produtos FROM (
-                SELECT id, role, content, tipo, produtos FROM messages ORDER BY id DESC LIMIT ?
+                SELECT id, role, content, tipo, produtos FROM messages
+                WHERE sessao_id = ? ORDER BY id DESC LIMIT ?
             ) ORDER BY id
             """,
-            (limite,),
+            (sessao.atual(), limite),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT role, content, tipo, produtos FROM messages ORDER BY id"
+            "SELECT role, content, tipo, produtos FROM messages WHERE sessao_id = ? ORDER BY id",
+            (sessao.atual(),),
         ).fetchall()
     conn.close()
     return [
@@ -65,12 +70,12 @@ def salvar_perfil(chave: str, valor: str) -> None:
     conn = get_connection()
     conn.execute(
         """
-        INSERT INTO perfil (chave, valor, atualizado_em)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor,
-                                         atualizado_em = CURRENT_TIMESTAMP
+        INSERT INTO perfil (sessao_id, chave, valor, atualizado_em)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(sessao_id, chave) DO UPDATE SET valor = excluded.valor,
+                                                    atualizado_em = CURRENT_TIMESTAMP
         """,
-        (chave, valor),
+        (sessao.atual(), chave, valor),
     )
     conn.commit()
     conn.close()
@@ -78,7 +83,9 @@ def salvar_perfil(chave: str, valor: str) -> None:
 
 def obter_perfil() -> dict:
     conn = get_connection()
-    rows = conn.execute("SELECT chave, valor FROM perfil").fetchall()
+    rows = conn.execute(
+        "SELECT chave, valor FROM perfil WHERE sessao_id = ?", (sessao.atual(),)
+    ).fetchall()
     conn.close()
     return {row["chave"]: row["valor"] for row in rows}
 
@@ -89,9 +96,10 @@ def endereco_do_ultimo_pedido() -> Optional[str]:
     row = conn.execute(
         """
         SELECT endereco_entrega FROM pedidos
-        WHERE endereco_entrega IS NOT NULL AND endereco_entrega != ''
+        WHERE sessao_id = ? AND endereco_entrega IS NOT NULL AND endereco_entrega != ''
         ORDER BY id DESC LIMIT 1
-        """
+        """,
+        (sessao.atual(),),
     ).fetchone()
     conn.close()
     return row["endereco_entrega"] if row else None
@@ -110,12 +118,13 @@ def inserir_pedido(
     cursor = conn.execute(
         """
         INSERT INTO pedidos (
-            produto_id, produto_nome, quantidade, valor_total, endereco_entrega,
-            status, status_notificado
+            sessao_id, produto_id, produto_nome, quantidade, valor_total,
+            endereco_entrega, status, status_notificado
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
+            sessao.atual(),
             produto_id,
             produto_nome,
             quantidade,
@@ -135,7 +144,9 @@ def inserir_pedido(
 
 def obter_pedido(pedido_id: int) -> Optional[dict]:
     conn = get_connection()
-    row = conn.execute("SELECT * FROM pedidos WHERE id = ?", (pedido_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM pedidos WHERE id = ? AND sessao_id = ?", (pedido_id, sessao.atual())
+    ).fetchone()
     conn.close()
     return dict(row) if row else None
 
@@ -143,7 +154,9 @@ def obter_pedido(pedido_id: int) -> Optional[dict]:
 def listar_pedidos() -> List[dict]:
     """Mais recentes primeiro, é a ordem em que o cliente quer ver."""
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM pedidos ORDER BY id DESC").fetchall()
+    rows = conn.execute(
+        "SELECT * FROM pedidos WHERE sessao_id = ? ORDER BY id DESC", (sessao.atual(),)
+    ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
@@ -153,8 +166,8 @@ def atualizar_entrega_agendada(pedido_id: int, data_entrega: str) -> Optional[di
     cliente x onde o pedido está na logística)."""
     conn = get_connection()
     conn.execute(
-        "UPDATE pedidos SET data_entrega_agendada = ? WHERE id = ?",
-        (data_entrega, pedido_id),
+        "UPDATE pedidos SET data_entrega_agendada = ? WHERE id = ? AND sessao_id = ?",
+        (data_entrega, pedido_id, sessao.atual()),
     )
     conn.commit()
     conn.close()
@@ -163,7 +176,10 @@ def atualizar_entrega_agendada(pedido_id: int, data_entrega: str) -> Optional[di
 
 def definir_codigo_rastreio(pedido_id: int, codigo: str) -> Optional[dict]:
     conn = get_connection()
-    conn.execute("UPDATE pedidos SET codigo_rastreio = ? WHERE id = ?", (codigo, pedido_id))
+    conn.execute(
+        "UPDATE pedidos SET codigo_rastreio = ? WHERE id = ? AND sessao_id = ?",
+        (codigo, pedido_id, sessao.atual()),
+    )
     conn.commit()
     conn.close()
     return obter_pedido(pedido_id)
@@ -185,9 +201,10 @@ def marcar_status_notificado(pedido_id: int, status: str) -> bool:
     cursor = conn.execute(
         """
         UPDATE pedidos SET status = ?, status_notificado = ?
-        WHERE id = ? AND (status_notificado IS NULL OR status_notificado != ?)
+        WHERE id = ? AND sessao_id = ?
+          AND (status_notificado IS NULL OR status_notificado != ?)
         """,
-        (status, status, pedido_id, status),
+        (status, status, pedido_id, sessao.atual(), status),
     )
     conn.commit()
     reservou = cursor.rowcount == 1

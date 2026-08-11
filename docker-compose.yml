@@ -1,0 +1,19 @@
+# Não validado: a máquina onde isto foi escrito não tem Docker.
+services:
+  lu:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Sem a chave o app sobe mas o chat responde 502 na primeira mensagem.
+      GROQ_API_KEY: ${GROQ_API_KEY:?defina GROQ_API_KEY no .env}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      # 20 deixa o pedido andar em cerca de um minuto, bom pra demonstrar.
+      # Use 86400 pra tempo real.
+      SEGUNDOS_POR_DIA_ENTREGA: ${SEGUNDOS_POR_DIA_ENTREGA:-20}
+    volumes:
+      - dados:/dados
+    restart: unless-stopped
+
+volumes:
+  dados:

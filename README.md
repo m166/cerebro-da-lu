@@ -32,6 +32,21 @@ uvicorn app.main:app --reload
 Abra http://localhost:8000 no navegador. A documentação da API fica em
 http://localhost:8000/docs.
 
+## Publicando
+
+```bash
+cp .env.example .env   # coloque a GROQ_API_KEY
+docker compose up --build
+```
+
+O banco fica num volume, então atualizar a imagem não apaga conversa. O
+modelo de embedding é baixado na construção da imagem, e não na primeira
+pergunta, senão o primeiro cliente esperaria os 470MB.
+
+**Não validado:** o `Dockerfile`, o `docker-compose.yml` e o workflow de CI
+foram escritos sem Docker e sem remote git disponíveis, então nunca foram
+construídos nem executados. Trate como ponto de partida a conferir.
+
 ## Testes
 
 ```bash

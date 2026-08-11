@@ -202,6 +202,36 @@ Regras da avaliação:
   de mexer no sistema, já aconteceu de o caso pedir tool onde a persona
   manda perguntar primeiro.
 
+## Sessão do visitante
+
+Cada navegador recebe um id anônimo num cookie, e `messages`, `pedidos` e
+`perfil` são filtrados por ele. Antes disso o histórico era global: quem
+abrisse o endereço lia a conversa de outra pessoa.
+
+- O id vive num **contextvar** preenchido por middleware (`app/sessao.py`),
+  não passa de camada em camada. As ferramentas são chamadas pelo modelo,
+  que não conhece sessão, então o parâmetro contaminaria vinte assinaturas
+  com um detalhe de transporte.
+- **Toda consulta nova a essas três tabelas precisa filtrar por
+  `sessao.atual()`.** Esquecer é vazar dado de um visitante pro outro, e o
+  teste não pega sozinho: escreva o caso em `test_routers.py` junto.
+- Fora de requisição (script, teste de unidade) a sessão é `"local"`.
+- Não há login. É anônimo de propósito: resolve o vazamento sem colocar
+  cadastro na frente de quem só quer experimentar. Login, se vier, se
+  apoia nesta mesma coluna.
+
+### Migração que exige cuidado
+
+`perfil` mudou de chave primária, e SQLite não altera PK com ALTER TABLE:
+a tabela é reconstruída. **Copie antes de descartar e confira a contagem.**
+A primeira versão deste código descartava sem conferir e só não perdeu o
+cadastro do usuário porque a cópia falhou antes do DROP.
+
+Linhas gravadas antes das sessões ficam com `sessao_id` NULL e são adotadas
+pelo primeiro visitante (`adotar_dados_orfaos`). Acontece uma vez só, então
+não teste isso contra o banco real: a adoção é consumida por quem chegar
+primeiro, inclusive um `curl` seu.
+
 ## Cadastro do cliente x histórico de conversa
 
 Nome e endereço ficam na tabela `perfil`, não na conversa, e entram no
