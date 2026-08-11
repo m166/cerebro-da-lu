@@ -5,7 +5,11 @@ modelo, sem rodar o loop de tool calling, assim nada é executado nem
 gravado: não cria pedido, não escreve histórico.
 """
 
+import re
+import time
 from typing import List, Set, Tuple
+
+from groq import RateLimitError
 
 from app import config
 from app.ai import tools
@@ -16,18 +20,44 @@ from evals.relatorio import Metrica, imprimir_erros, linha_erro, secao
 Resultado = Tuple[List[Metrica], List[str]]
 
 
-def _ferramentas_escolhidas(mensagem: str) -> List[str]:
-    completion = get_client().chat.completions.create(
-        model=config.GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": config.persona()},
-            {"role": "user", "content": mensagem},
-        ],
-        tools=tools.TOOL_SCHEMAS,
-        tool_choice="auto",
-    )
-    chamadas = completion.choices[0].message.tool_calls or []
-    return [c.function.name for c in chamadas]
+def _ferramentas_escolhidas(mensagem: str, tentativas: int = 4) -> List[str]:
+    """Pergunta ao modelo qual ferramenta ele usaria, respeitando o limite.
+
+    A conta free trabalha com 8000 tokens por minuto e cada caso custa uns
+    2600 (persona mais schemas). Disparar os 21 casos em sequência estoura o
+    teto e a avaliação morria no meio com 429. Aqui ela espera o tempo que a
+    própria Groq informa e tenta de novo, em vez de derrubar a execução.
+    """
+    for tentativa in range(tentativas):
+        try:
+            completion = get_client().chat.completions.create(
+                model=config.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": config.persona()},
+                    {"role": "user", "content": mensagem},
+                ],
+                tools=tools.TOOL_SCHEMAS,
+                tool_choice="auto",
+            )
+            chamadas = completion.choices[0].message.tool_calls or []
+            return [c.function.name for c in chamadas]
+        except RateLimitError as exc:
+            if tentativa == tentativas - 1:
+                raise
+            espera = _segundos_de_espera(str(exc))
+            print(f"    limite de tokens atingido, aguardando {espera:.0f}s")
+            time.sleep(espera)
+    return []
+
+
+def _segundos_de_espera(mensagem: str) -> float:
+    """Usa o tempo que a Groq informa, com um mínimo pra não voltar cedo."""
+    achado = re.search(r"try again in ([\d.]+)(m?s)", mensagem)
+    if not achado:
+        return 20.0
+    valor = float(achado.group(1))
+    segundos = valor / 1000 if achado.group(2) == "ms" else valor
+    return max(segundos + 1.0, 5.0)
 
 
 def avaliar_escolha() -> Resultado:

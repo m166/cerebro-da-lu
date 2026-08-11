@@ -65,8 +65,8 @@ modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
 | MRR | 0,968 |
 | cobertura do domínio (sobrevive ao corte) | 52/52 (100%) |
 | rejeição de pergunta fora de escopo | 7/8 |
-| ferramenta correta | 16/18 (88,9%) |
-| respondeu sem consultar ferramenta | 1/18 |
+| ferramenta correta | 18/18 (100%) |
+| respondeu sem consultar ferramenta | 0/18 |
 | conversa sem disparar ferramenta | 3/3 |
 
 A avaliação de ferramenta varia entre execuções, o modelo não é
