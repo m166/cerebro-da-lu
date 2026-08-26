@@ -34,19 +34,11 @@ def test_listar_mensagens_sem_limite_traz_tudo():
     assert len(repositories.listar_mensagens()) == 4
 
 
-def test_banco_apagado_com_app_no_ar_se_recupera():
-    """Sem isso, apagar o arquivo deixa toda consulta falhando com
-    "no such table" até alguém reiniciar o processo."""
-    from app import config
-
-    repositories.inserir_mensagem("user", "antes")
-    config.DB_PATH.unlink()
-
-    assert repositories.listar_mensagens() == []
-    repositories.inserir_mensagem("user", "depois")
-    assert repositories.listar_mensagens() == [
-        {"role": "user", "content": "depois", "tipo": "chat", "produtos": []}
-    ]
+# O teste do banco apagado com o app no ar saiu junto com o SQLite: ele
+# cobria o arquivo `cerebro.db` ser removido embaixo do processo, e a
+# recuperação era recriar o schema na conexão seguinte. Com um servidor de
+# banco esse modo de falha não existe, e recriar tabela sozinho no meio de
+# uma consulta esconderia um problema de infraestrutura em vez de mostrá-lo.
 
 
 # --- Pedidos -------------------------------------------------------------
@@ -179,3 +171,36 @@ def test_obter_produto_por_id():
 
 def test_obter_produto_inexistente_retorna_none():
     assert repositories.obter_produto(9999) is None
+
+
+def test_catalogo_cresceu_e_mantem_variedade():
+    """O catálogo precisa ser grande e variado pra comparação valer: muitos
+    itens numa faixa de preço só não ajudam ninguém a escolher."""
+    precos = [p["preco"] for p in catalogo.PRODUTOS]
+    assert len(catalogo.PRODUTOS) >= 180
+    assert len(catalogo.CATEGORIAS) >= 35
+    assert min(precos) < 100
+    assert max(precos) > 10_000
+
+
+def test_todo_produto_tem_ilustracao_propria():
+    """Imagem por produto, e não por categoria: dois notebooks não podem
+    aparecer com a mesma figura na vitrine."""
+    from app import ilustracao
+
+    imagens = {p["imagem"] for p in catalogo.PRODUTOS}
+    assert len(imagens) == len(catalogo.PRODUTOS)
+
+    cores = {
+        ilustracao.svg_do_produto(p).split('stop-color="')[1][:7]
+        for p in catalogo.PRODUTOS
+        if p["categoria"] == "notebooks"
+    }
+    assert len(cores) > 1
+
+
+def test_toda_categoria_tem_forma_desenhada():
+    """Categoria sem molde derruba a geração da imagem dos produtos dela."""
+    from app.data.ilustracoes import FORMAS
+
+    assert set(catalogo.CATEGORIAS) <= set(FORMAS)

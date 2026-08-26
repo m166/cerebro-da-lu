@@ -2,12 +2,19 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import schemas, services
 from app.ai import chat as chat_service
+from app.routers.identificacao import exigir_identificacao
 
-router = APIRouter(prefix="/api", tags=["chat"])
+# A conversa inteira é de um número só: histórico, resposta e aviso de
+# pedido. Sem identificação não há de quem seja a mensagem.
+router = APIRouter(
+    prefix="/api",
+    tags=["chat"],
+    dependencies=[Depends(exigir_identificacao)],
+)
 
 
 @router.get("/history", response_model=List[schemas.MensagemOut])
@@ -29,7 +36,9 @@ def notificacoes():
 @router.post("/chat", response_model=schemas.ChatResponse)
 def chat(request: schemas.ChatRequest):
     try:
-        return chat_service.responder(request.content)
+        return chat_service.responder(request.content, request.imagem)
+    except chat_service.ImagemRecusada as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except chat_service.LimiteDeUso as exc:
         raise HTTPException(status_code=429, detail=str(exc))
     except chat_service.ChatIncompleto as exc:

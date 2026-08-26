@@ -2,9 +2,9 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
-from app import exceptions, schemas, services
+from app import exceptions, ilustracao, schemas, services
 
 router = APIRouter(prefix="/api", tags=["produtos"])
 
@@ -48,6 +48,25 @@ def comparar_produtos(request: schemas.ComparacaoRequest):
         )
     except exceptions.ComparacaoInvalida as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.get("/produtos/{produto_id}/imagem.svg", include_in_schema=False)
+def imagem_do_produto(produto_id: int):
+    """Ilustração do produto, gerada na hora.
+
+    Sai como SVG porque é vetor: alguns kB por item, nítido em qualquer
+    tela, e nada pra guardar em disco pra 184 produtos.
+    """
+    try:
+        produto = services.obter_produto(produto_id)
+    except exceptions.ProdutoNaoEncontrado as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    return Response(
+        content=ilustracao.svg_do_produto(produto),
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @router.get("/produtos/{produto_id}", response_model=schemas.ProdutoOut)

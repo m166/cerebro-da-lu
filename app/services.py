@@ -5,10 +5,21 @@ não faz sentido no domínio, levantam uma exceção de `app.exceptions`, quem
 chama decide como apresentar (HTTP ou mensagem pro modelo).
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable, List, Optional
 
-from app import config, exceptions, models, repositories
+from app import (
+    abandono,
+    config,
+    cupom,
+    exceptions,
+    models,
+    pistas,
+    repositories,
+    sessao,
+    telefone,
+    whatsapp,
+)
 
 
 # --- Catálogo -------------------------------------------------------------
@@ -55,6 +66,22 @@ def buscar_conhecimento(pergunta: str, categoria: str = "", limite: Optional[int
         if d["score"] >= config.SCORE_MINIMO_CONHECIMENTO
         or d["score_lexical"] >= config.SCORE_LEXICAL_MINIMO
     ]
+
+    if not relevantes:
+        # O buraco da base, registrado no instante em que aparece. É o sinal
+        # mais barato de coletar e o mais acionável que existe aqui: vira uma
+        # fila de documentos a escrever, priorizada por quantas pessoas
+        # perguntaram de verdade em vez de por palpite de quem edita o corpus.
+        repositories.registrar_evento(
+            models.EVENTO_RAG_SEM_RESPOSTA,
+            {
+                "pergunta": pergunta,
+                "categoria": categoria or None,
+                # O melhor score que mesmo assim não passou, pra distinguir
+                # "quase achou" de "não existe nada parecido na base".
+                "melhor_score": round(max((d["score"] for d in encontrados), default=0), 3),
+            },
+        )
 
     return {
         "pergunta": pergunta,
@@ -135,6 +162,17 @@ def comparar_produtos(categoria: str = "", produto_ids: Optional[List[int]] = No
 
 # --- Cadastro do cliente ---------------------------------------------------
 
+def telefone_do_cliente() -> Optional[str]:
+    """O número de quem está falando, quando a conversa veio pelo canal.
+
+    Vem da sessão, não do cadastro: no WhatsApp o número é o remetente da
+    mensagem, e ninguém digita o próprio. Fora de uma requisição a sessão é
+    `local`, que não é telefone, e aí não há número a informar.
+    """
+    atual = sessao.atual()
+    return atual if telefone.valido(atual) else None
+
+
 def dados_do_cliente() -> dict:
     """O que a Lu já sabe sobre quem está conversando.
 
@@ -146,10 +184,21 @@ def dados_do_cliente() -> dict:
         ultimo = repositories.endereco_do_ultimo_pedido()
         if ultimo:
             perfil["endereco"] = ultimo
-    return {campo: perfil.get(campo) for campo in models.CAMPOS_PERFIL if perfil.get(campo)}
+
+    dados = {}
+    numero = telefone_do_cliente()
+    if numero:
+        dados["telefone"] = telefone.formatar(numero)
+    dados.update(
+        {campo: perfil.get(campo) for campo in models.CAMPOS_PERFIL if perfil.get(campo)}
+    )
+    return dados
 
 
 def salvar_dado_do_cliente(campo: str, valor: str) -> dict:
+    # `telefone` não está em CAMPOS_PERFIL de propósito: ele vem do canal, e
+    # deixar o modelo gravar por cima abriria a porta pra um cliente assumir
+    # o número (e o histórico) de outro só dizendo que mudou de celular.
     if campo not in models.CAMPOS_PERFIL:
         raise exceptions.CampoDePerfilInvalido(campo, models.CAMPOS_PERFIL)
     if not valor or not valor.strip():
@@ -157,6 +206,237 @@ def salvar_dado_do_cliente(campo: str, valor: str) -> dict:
 
     repositories.salvar_perfil(campo, valor.strip())
     return dados_do_cliente()
+
+
+# --- Memória da conversa ---------------------------------------------------
+
+def anotar_da_conversa(campo: str, valor: str) -> dict:
+    """Guarda algo que o cliente revelou e que a janela de histórico apagaria.
+
+    Separado de `salvar_dado_do_cliente` porque a validade é outra: nome e
+    endereço valem daqui a meses, orçamento e recusa valem pra esta compra.
+    """
+    if campo not in models.CAMPOS_MEMORIA:
+        raise exceptions.CampoDeMemoriaInvalido(campo, models.CAMPOS_MEMORIA)
+    if not valor or not valor.strip():
+        raise exceptions.CampoDeMemoriaInvalido(campo, models.CAMPOS_MEMORIA)
+
+    repositories.salvar_memoria(campo, valor.strip())
+    return memoria_da_conversa()
+
+
+def memoria_da_conversa() -> dict:
+    """O que a Lu precisa ter em vista, já resolvido, sem depender da janela.
+
+    Combina três origens, e a ordem entre elas foi decidida por medição:
+
+    - **Lido do texto** (`pistas`), pro orçamento e pras recusas. Ganha do
+      que o modelo anotou porque é sempre a fala mais recente: ele só chama
+      a ferramenta quando a mensagem não disputa com uma busca, então a
+      anotação envelhece sem avisar.
+    - **Derivado do banco**, pros produtos já mostrados. O dado já existe em
+      `messages.produtos`, e derivar não depende de ninguém lembrar.
+    - **Anotado pelo modelo**, pro resto (a finalidade da compra, que nenhum
+      padrão de texto pega) e como reserva quando a leitura não achou nada.
+    """
+    anotado = repositories.obter_memoria()
+    lembrado = {
+        campo: anotado[campo] for campo in models.CAMPOS_MEMORIA if anotado.get(campo)
+    }
+
+    falas = [m["content"] for m in repositories.listar_mensagens() if m["role"] == "user"]
+
+    lido = pistas.orcamento(falas)
+    if lido:
+        lembrado["orcamento"] = lido
+
+    produtos = [
+        produto
+        for produto in (
+            repositories.obter_produto(pid) for pid in repositories.produtos_ja_citados()
+        )
+        if produto
+    ]
+
+    recusados = pistas.recusas(
+        falas, produtos, [p["nome"] for p in repositories.listar_produtos()]
+    )
+    if recusados:
+        # O que o modelo anotou entra junto: ele pega recusa de marca e de
+        # categoria ("não quero nada da Samsung"), que não casa com nome de
+        # produto nenhum e escaparia da leitura.
+        anteriores = [p.strip() for p in lembrado.get("recusou", "").split(",") if p.strip()]
+        for nome in recusados:
+            if nome not in anteriores:
+                anteriores.append(nome)
+        lembrado["recusou"] = ", ".join(anteriores)
+
+    if produtos:
+        lembrado["ja_sugeridos"] = ", ".join(p["nome"] for p in produtos)
+    return lembrado
+
+
+# --- Abandono e cupom de recuperação ---------------------------------------
+
+def situacao_da_conversa(agora: Optional[datetime] = None) -> dict:
+    """Se o cliente parece ter desistido da compra, e por quê.
+
+    Junta os três fatos que a decisão precisa: quando ele falou, se chegou a
+    demonstrar interesse em algum produto, e se já fechou pedido.
+    """
+    return abandono.avaliar(
+        momentos_do_cliente=repositories.momentos_do_cliente(),
+        demonstrou_interesse=bool(repositories.produtos_ja_citados(limite=1)),
+        ja_comprou=bool(repositories.listar_pedidos()),
+        agora=agora,
+    )
+
+
+def oferecer_cupom(produto_id: int, agora: Optional[datetime] = None) -> dict:
+    """Emite um cupom, **se e somente se** o cliente estiver desistindo.
+
+    A trava mora aqui e não na persona, e isso é deliberado. Este projeto já
+    mediu duas vezes que o modelo ignora instrução quando está ocupado com
+    outra coisa: foi assim com o tom e com `anotar_da_conversa`. Uma regra
+    que custa dinheiro não pode depender de o modelo lembrar dela, então a
+    ferramenta pergunta e a resposta pode ser não.
+
+    O valor também não vem do modelo: quem calcula é `cupom.calcular`, a
+    partir da margem do produto. Ele decide *se pede*, nunca *quanto*.
+    """
+    situacao = situacao_da_conversa(agora)
+    if not situacao["abandonou"]:
+        raise exceptions.CupomAindaNaoCabe(situacao["motivo"])
+
+    ja_emitidos = repositories.cupons_da_sessao()
+    if len(ja_emitidos) >= config.MAX_CUPONS_POR_SESSAO:
+        raise exceptions.CupomAindaNaoCabe(
+            f"esta conversa já recebeu {len(ja_emitidos)} cupons, que é o limite"
+        )
+    if any(c["produto_id"] == produto_id and not c["usado_em"] for c in ja_emitidos):
+        raise exceptions.CupomAindaNaoCabe(
+            "já existe um cupom aberto pra este produto nesta conversa"
+        )
+
+    produto = obter_produto(produto_id)
+    oferta = cupom.calcular(produto)
+
+    codigo = cupom.gerar_codigo()
+    expira = (agora or datetime.now(timezone.utc)) + timedelta(
+        hours=config.VALIDADE_CUPOM_HORAS
+    )
+    repositories.salvar_cupom(
+        codigo=codigo,
+        produto_id=produto_id,
+        valor_desconto=oferta["valor_desconto"],
+        margem_na_emissao=oferta["margem_liquida"],
+        expira_em=expira,
+        motivo=situacao["motivo"],
+    )
+    repositories.registrar_evento(
+        models.EVENTO_CUPOM_OFERECIDO,
+        {
+            "produto_id": produto_id,
+            "valor": oferta["valor_desconto"],
+            "motivo": situacao["motivo"],
+        },
+    )
+
+    return {
+        **oferta,
+        "codigo": codigo,
+        "expira_em": expira.strftime("%d/%m às %Hh"),
+        "motivo_da_oferta": situacao["motivo"],
+    }
+
+
+def validar_cupom(codigo: str, produto_id: int) -> dict:
+    """Confere se o cupom vale, sem consumir. Serve pra mostrar o preço."""
+    registro = repositories.obter_cupom(codigo)
+    if registro is None:
+        raise exceptions.CupomInvalido("não encontrei esse código nesta conversa")
+    if registro["usado_em"]:
+        raise exceptions.CupomInvalido("esse cupom já foi usado")
+    if not cupom.valida_para_o_produto(registro, produto_id):
+        raise exceptions.CupomInvalido(
+            "esse cupom foi criado pra outro produto e o desconto não se transfere"
+        )
+
+    expira = _para_datetime(registro["expira_em"])
+    if expira and expira < datetime.utcnow():
+        raise exceptions.CupomInvalido("esse cupom expirou")
+    return registro
+
+
+# --- Satisfação e diagnóstico ----------------------------------------------
+
+def registrar_satisfacao(nota: int, comentario: str = "", assunto: str = "") -> dict:
+    if not models.NOTA_MINIMA <= nota <= models.NOTA_MAXIMA:
+        raise exceptions.NotaInvalida(nota, models.NOTA_MINIMA, models.NOTA_MAXIMA)
+    repositories.registrar_satisfacao(nota, comentario, assunto)
+    return {"registrado": True, "nota": nota}
+
+
+def diagnostico(limite: int = 10) -> dict:
+    """O que o sistema está errando, em ordem de impacto.
+
+    Não corrige nada sozinho, e isso é escolha. Mudança automática de
+    comportamento precisa de um jeito de detectar que piorou, e aqui a régua
+    (a pasta `evals/`) roda sob demanda, não continuamente. O sistema aponta,
+    o humano decide, e a aplicação passa pelo eval.
+
+    A prioridade é por frequência, porque perguntar "o que mais atrapalha
+    mais gente" é a única ordenação que se sustenta sem opinião.
+    """
+    perguntas = repositories.perguntas_sem_resposta(limite)
+    satisfacao = repositories.resumo_da_satisfacao()
+
+    acoes = []
+    if perguntas:
+        acoes.append(
+            {
+                "prioridade": "alta" if perguntas[0]["vezes"] >= 3 else "média",
+                "onde": "base de conhecimento",
+                "o_que_fazer": (
+                    f"Escrever documento sobre \"{perguntas[0]['pergunta']}\", "
+                    f"perguntado {perguntas[0]['vezes']} vez(es) sem resposta."
+                ),
+            }
+        )
+    abandonos = repositories.contar_eventos(models.EVENTO_ABANDONO)
+    ofertados = repositories.contar_eventos(models.EVENTO_CUPOM_OFERECIDO)
+    usados = repositories.contar_eventos(models.EVENTO_CUPOM_USADO)
+    if ofertados and usados / ofertados < 0.2:
+        acoes.append(
+            {
+                "prioridade": "média",
+                "onde": "cupom",
+                "o_que_fazer": (
+                    f"Só {usados} de {ofertados} cupons converteram. Revisar o "
+                    "gatilho de abandono ou o tamanho do desconto."
+                ),
+            }
+        )
+    if satisfacao.get("insatisfeitos"):
+        acoes.append(
+            {
+                "prioridade": "alta",
+                "onde": "atendimento",
+                "o_que_fazer": (
+                    f"{satisfacao['insatisfeitos']} avaliação(ões) nota 1 ou 2. "
+                    "Ler os comentários em `notas_baixas`."
+                ),
+            }
+        )
+
+    return {
+        "satisfacao": satisfacao,
+        "reclamacoes": repositories.notas_baixas(limite),
+        "perguntas_sem_resposta": perguntas,
+        "abandonos": abandonos,
+        "cupons": {"oferecidos": ofertados, "usados": usados},
+        "acoes_sugeridas": acoes,
+    }
 
 
 # --- Rastreio: código e progressão de status ------------------------------
@@ -304,15 +584,65 @@ def rastrear_pedido(pedido_id: int) -> dict:
 # --- Notificação de mudança de status --------------------------------------
 
 def _texto_da_notificacao(pedido: dict, status: str) -> str:
-    modelo = models.MENSAGENS_NOTIFICACAO.get(
-        status, "Seu pedido #{id} ({produto}) mudou de status: {status}."
+    """O texto do aviso, renderizado a partir do template do canal.
+
+    É o mesmo template que seria enviado pela Cloud API, com os parâmetros já
+    substituídos. Manter uma fonte só evita o pior tipo de divergência aqui:
+    a tela mostrar uma frase e o cliente receber outra, aprovada meses antes.
+    """
+    template = models.TEMPLATES_NOTIFICACAO.get(status)
+    if template is None:
+        return models.TEMPLATE_GENERICO.format(
+            id=pedido["id"], produto=pedido["produto_nome"], status=status
+        )
+    valores = {"id": pedido["id"], "produto": pedido["produto_nome"]}
+    if "codigo" in template.parametros:
+        valores["codigo"] = pedido["codigo_rastreio"]
+    return template.renderizar(**valores)
+
+
+def canal_aceita_texto_livre(agora: Optional[datetime] = None) -> bool:
+    """Se a Cloud API entregaria uma mensagem espontânea agora, ou só template.
+
+    A janela é de 24 horas contadas da última mensagem do cliente. Resposta
+    dentro de uma conversa está sempre dentro dela (ele acabou de escrever),
+    então quem precisa perguntar isto é o que sai sozinho: aviso de pedido,
+    lembrete, retomada de carrinho.
+
+    `agora` é aceito pra testar sem depender do relógio, como no
+    `status_derivado`.
+    """
+    return whatsapp.dentro_da_janela(
+        repositories.ultima_mensagem_do_cliente(), agora=agora
     )
-    return modelo.format(
-        id=pedido["id"],
-        produto=pedido["produto_nome"],
-        codigo=pedido["codigo_rastreio"],
-        status=status,
-    )
+
+
+def notificacao_para_envio(pedido: dict, status: str) -> Optional[dict]:
+    """O que o transporte precisa mandar pra Cloud API, quando ele existir.
+
+    Devolve `None` na etapa sem template aprovado, que é o caso em que a
+    mensagem só pode aparecer no simulador: inventar um nome de template no
+    envio devolveria erro da Meta, não a mensagem.
+
+    Não faz requisição nenhuma. O provedor ainda não foi escolhido, e o que
+    faltava pra escolher era justamente ter a mensagem neste formato.
+    """
+    template = models.TEMPLATES_NOTIFICACAO.get(status)
+    if template is None:
+        return None
+    valores = {"id": pedido["id"], "produto": pedido["produto_nome"]}
+    if "codigo" in template.parametros:
+        valores["codigo"] = pedido["codigo_rastreio"]
+    return {
+        "messaging_product": "whatsapp",
+        "to": pedido.get("sessao_id"),
+        "type": "template",
+        "template": {
+            "name": template.nome,
+            "language": {"code": whatsapp.IDIOMA},
+            "components": template.componentes(**valores),
+        },
+    }
 
 
 def _avancou(status: str, notificado: Optional[str]) -> bool:

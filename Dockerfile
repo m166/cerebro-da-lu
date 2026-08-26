@@ -32,12 +32,20 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('intfloat/multilingual-e5-small')"
 
 COPY app app
-COPY static static
 COPY persona.md .
 
-# O banco fica em volume separado: sem isso, cada deploy apaga as conversas.
-ENV DB_PATH=/dados/cerebro.db
-VOLUME /dados
+# `static/` NÃO entra na imagem. O simulador é andaime de teste: nele
+# qualquer um digita qualquer número e cai na conversa daquele cliente, sem
+# verificação nenhuma. Local tudo bem, publicado é vazamento.
+#
+# A variável desliga junto a tela e o endpoint que reivindica um número. Ela
+# é o que vale: sem `static/` no disco, montar /static quebraria o boot.
+ENV SIMULADOR=0
+
+# O banco é um serviço à parte (veja docker-compose.yml), não um arquivo
+# dentro do container: foi por isso que o SQLite saiu. Quem sobe a imagem
+# sozinha precisa passar DATABASE_URL apontando pra um Postgres com a
+# extensão pgvector habilitada.
 
 EXPOSE 8000
 

@@ -114,6 +114,93 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "anotar_da_conversa",
+            "description": (
+                "Anota algo desta compra que você vai precisar lembrar mais tarde: "
+                "quanto ele quer gastar, um produto ou marca que ele descartou, ou "
+                "pra quem/pra quê é a compra. Chame assim que ele contar, porque "
+                "conversa longa faz isso sair de vista. Não é cadastro: nome e "
+                "endereço vão em salvar_dado_do_cliente. O que já foi anotado "
+                "aparece no começo desta conversa, não chame isto pra consultar."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "campo": {
+                        "type": "string",
+                        "enum": list(models.CAMPOS_MEMORIA),
+                        "description": (
+                            "orcamento (quanto quer gastar), recusou (o que "
+                            "descartou), proposito (pra quem ou pra quê é)."
+                        ),
+                    },
+                    "valor": {
+                        "type": "string",
+                        "description": "Em poucas palavras, como o cliente disse.",
+                    },
+                },
+                "required": ["campo", "valor"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "oferecer_cupom",
+            "description": (
+                "Pede autorização pra oferecer um desconto ao cliente, quando "
+                "ele parecer estar desistindo da compra. Você NÃO escolhe o "
+                "valor: quem calcula é o sistema, a partir da margem do "
+                "produto. A resposta pode ser uma recusa, e nesse caso é "
+                "porque ainda não é hora: continue vendendo normalmente e não "
+                "mencione desconto, cupom nem promoção. Nunca prometa desconto "
+                "antes de chamar isto e receber um código de volta."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "produto_id": {
+                        "type": "integer",
+                        "description": "O produto sobre o qual ele ficou na dúvida.",
+                    },
+                },
+                "required": ["produto_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "registrar_satisfacao",
+            "description": (
+                "Guarda a avaliação que o cliente deu ao atendimento, de 1 a "
+                "5. Use quando ele disser espontaneamente que foi bem ou mal "
+                "atendido, ou quando responder a um pedido de nota. Não peça "
+                "nota mais de uma vez na mesma conversa."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nota": {
+                        "type": "integer",
+                        "description": "De 1 (péssimo) a 5 (ótimo).",
+                    },
+                    "comentario": {
+                        "type": "string",
+                        "description": "O que ele disse, nas palavras dele.",
+                    },
+                    "assunto": {
+                        "type": "string",
+                        "description": "Sobre o que era a conversa (ex: 'rastreio', 'escolha de notebook').",
+                    },
+                },
+                "required": ["nota"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "consultar_estoque",
             "description": "Consulta se um produto tem estoque disponível.",
             "parameters": {
@@ -265,6 +352,9 @@ DISPATCH = {
     "buscar_produtos": _buscar_produtos,
     "buscar_conhecimento": services.buscar_conhecimento,
     "salvar_dado_do_cliente": services.salvar_dado_do_cliente,
+    "anotar_da_conversa": services.anotar_da_conversa,
+    "oferecer_cupom": services.oferecer_cupom,
+    "registrar_satisfacao": services.registrar_satisfacao,
     "listar_categorias": lambda: {"categorias": services.listar_categorias()},
     "consultar_estoque": services.consultar_estoque,
     "sugerir_produto": services.sugerir_produto,

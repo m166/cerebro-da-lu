@@ -624,6 +624,186 @@ _DOCUMENTOS = [
         "do recebimento, sem precisar justificar o motivo, dá pra devolver e receber o dinheiro "
         "de volta. Defeito que aparece dentro da garantia deve ser resolvido em até 30 dias.",
     ),
+    (
+        "Escolher entre SSD externo, HD externo e pen drive",
+        "armazenamento",
+        (
+            "hd externo pra backup das fotos",
+            "pen drive ou disco externo pra levar na mochila?",
+            "qual a diferença de ssd externo pro hd externo?",
+            "quantos TB de disco externo pegar?",
+        ),
+        "SSD externo não tem peça girando, então transfere muito mais rápido e aguenta melhor "
+        "tranco de mochila: é o certo pra quem carrega o disco ou trabalha com vídeo. HD externo "
+        "custa bem menos por terabyte e serve pro backup que fica parado, onde velocidade não "
+        "importa. Pen drive é pra transportar arquivo, não pra guardar a única cópia. Prefira "
+        "conector USB-C em notebook novo, e conte com capacidade um pouco menor que a anunciada.",
+    ),
+    (
+        "Barbeador, aparador e máquina de cortar cabelo",
+        "barbeadores",
+        (
+            "barbeador elétrico corta menos que lâmina?",
+            "barbeador à prova d'água pode usar no banho?",
+            "máquina de cortar cabelo em casa, que pente usar?",
+            "quanto dura a bateria do barbeador?",
+        ),
+        "Barbeador elétrico não encosta a lâmina na pele, então irrita menos que a lâmina comum, "
+        "mas raspa um pouco menos rente. Modelo à prova d'água pode ser lavado na torneira, que é "
+        "a parte chata da limpeza. Na máquina de cortar cabelo, o número do pente é a altura em "
+        "milímetros que sobra: comece pelo maior. Bateria de lítio dá de 40 a 60 minutos de uso, "
+        "e a maioria dos aparelhos também funciona na tomada.",
+    ),
+    (
+        "Umidificador, desumidificador e aquecedor a óleo",
+        "climatizacao",
+        (
+            "umidificador ajuda com nariz seco de madrugada?",
+            "desumidificador resolve mofo na parede?",
+            "qual a diferença de umidificador pra desumidificador?",
+            "aquecedor a óleo gasta muita luz?",
+        ),
+        "Umidificador joga água no ar e serve pra tempo seco, que causa nariz sangrando e garganta "
+        "áspera. Desumidificador faz o contrário, tira água do ar, e é o que resolve mofo na "
+        "parede e roupa que não seca. Usar umidificador em ambiente já úmido piora o mofo. "
+        "Aquecedor a óleo não deixa peça em brasa e resseca menos que o de resistência exposta, "
+        "mas puxa bastante energia: use só no cômodo ocupado.",
+    ),
+    (
+        "Que litragem de forno elétrico escolher",
+        "fornos-eletricos",
+        (
+            "forno elétrico assa bolo como forno a gás?",
+            "quantos litros de forno elétrico pra travessa grande?",
+            "que litragem de forno pra assar frango inteiro?",
+            "forno elétrico de bancada pequeno serve?",
+        ),
+        "A litragem define o que cabe dentro. Até 15 litros é forno de apoio: torrada e porção "
+        "pequena, não aceita travessa nem frango inteiro. De 40 a 50 litros atende a maioria das "
+        "casas e assa bolo, lasanha e frango. Acima de 70 litros só compensa pra quem assa em "
+        "quantidade. Confira a altura útil: em forno raso o bolo cresce e encosta na resistência "
+        "de cima. Diferente do micro-ondas, ele doura e gratina.",
+    ),
+    (
+        "Grill, sanduicheira e churrasqueira elétrica",
+        "grills",
+        (
+            "grill elétrico faz carne sem fumaça no apartamento?",
+            "sanduicheira que também grelha bife",
+            "chapa antiaderente do grill descasca?",
+            "churrasqueira elétrica funciona em apartamento?",
+        ),
+        "Grill fecha e grelha pelos dois lados ao mesmo tempo, o que corta o tempo pela metade e "
+        "dispensa virar a carne. Solta menos fumaça que a frigideira no fogo alto, embora nenhum "
+        "seja livre de cheiro. Modelo 3 em 1 troca as chapas e resolve cozinha pequena com um "
+        "aparelho só. Churrasqueira elétrica tem reservatório de água que segura a fumaça da "
+        "gordura. O que arruína o antiaderente é talher de metal e esponja de aço.",
+    ),
+    (
+        "Lâmpada inteligente, LED e temperatura de cor",
+        "iluminacao",
+        (
+            "lâmpada inteligente que acende pelo aplicativo",
+            "luz branca ou amarela de lâmpada pro quarto?",
+            "lâmpada led economiza na conta de luz?",
+            "lâmpada inteligente funciona sem internet?",
+        ),
+        "A temperatura de cor define o uso do cômodo: de 2700K a 3000K a luz é amarela e combina "
+        "com quarto e sala à noite; de 5000K a 6500K é branca e serve pra cozinha e área de "
+        "trabalho. LED gasta cerca de um quinto de uma incandescente, e o que compara brilho é o "
+        "lúmen, não o watt. Lâmpada inteligente exige Wi-Fi de 2,4GHz, não enxerga rede 5GHz, e "
+        "precisa do interruptor de parede ligado pra receber comando.",
+    ),
+    (
+        "Capacidade e instalação da lava-louças",
+        "lava-loucas",
+        (
+            "o que significa 8 serviços na lava-louças?",
+            "lava-louças de bancada sem precisar embutir",
+            "lava-louças gasta menos água que lavar na mão?",
+            "precisa enxaguar a louça antes de pôr na máquina?",
+        ),
+        "Serviço é a louça de uma pessoa numa refeição: prato, prato fundo, sobremesa, xícara, "
+        "copo e talheres. De 6 a 8 serviços atende casal, de 10 a 12 atende família de quatro sem "
+        "rodar duas vezes. Modelo de bancada dispensa reforma, precisa só de tomada e ponto de "
+        "água. Não enxágue antes, basta tirar o resto sólido, senão a economia de água se perde. "
+        "Madeira, ferro fundido e antiaderente antigo não vão na máquina.",
+    ),
+    (
+        "Panela de pressão elétrica, de arroz e multiprocessador",
+        "panelas-eletricas",
+        (
+            "panela de pressão elétrica é mais segura que a comum?",
+            "panela elétrica cozinha feijão sozinha?",
+            "panela elétrica de arroz vale a pena?",
+            "multiprocessador que pica e rala legume",
+        ),
+        "A panela de pressão elétrica trava a tampa enquanto há pressão dentro e desliga sozinha "
+        "no fim do tempo, o que resolve o medo da tradicional e permite programar e sair de perto. "
+        "Feijão sai em cerca de 25 minutos, carne dura em 40, e a de 6 litros atende família de "
+        "quatro. A panela de arroz passa sozinha para modo aquecido quando a água seca. "
+        "Multiprocessador não cozinha, ele pica, rala e fatia antes do preparo.",
+    ),
+    (
+        "Purificador de água: gelada, natural ou quente",
+        "purificadores",
+        (
+            "purificador de água pra parar de comprar galão",
+            "purificador é a mesma coisa que filtro de barro?",
+            "purificador com água quente vale a pena?",
+            "de quanto em quanto tempo troca o refil do purificador?",
+        ),
+        "Purificador liga na rede de água e dispensa o galão, além de gelar, enquanto o filtro de "
+        "barro só filtra em temperatura ambiente. O refil retém cloro e o gosto da água tratada, "
+        "mas não trata água de poço sem análise. Modelo com água quente entrega temperatura de "
+        "chá na hora e puxa mais energia. Troque o refil a cada 6 meses: fluxo caindo é sinal de "
+        "saturação, não de defeito.",
+    ),
+    (
+        "Roteador Wi-Fi, faixas de frequência e mesh",
+        "roteadores",
+        (
+            "wifi não pega no quarto dos fundos, roteador resolve?",
+            "o que é wifi mesh e quando precisa?",
+            "roteador wifi 6 vale a pena em casa?",
+            "vale trocar o roteador da operadora?",
+        ),
+        "Parede de concreto e laje derrubam Wi-Fi, e roteador mais potente não resolve isso: o que "
+        "cobre a casa toda é mesh, com dois ou três pontos entregando a mesma rede. A faixa de "
+        "2,4GHz alcança mais longe e atravessa parede, mas é lenta e congestionada; a de 5GHz é "
+        "bem mais rápida e alcança menos. Wi-Fi 6 ajuda quando há muitos aparelhos ligados ao "
+        "mesmo tempo, e pouco em casa de uma ou duas pessoas.",
+    ),
+    (
+        "Potência e temperatura no secador de cabelo",
+        "secadores",
+        (
+            "quantos watts de secador de cabelo é bom?",
+            "secador com íons faz diferença no frizz?",
+            "secador de viagem dobrável é bivolt?",
+            "secador desliga sozinho quando esquenta demais",
+        ),
+        "De 1900W a 2000W seca cabelo comum, e acima de 2200W compensa pra cabelo grosso, longo ou "
+        "volumoso. O que danifica o fio é calor alto constante e bico encostado: seque a uns 15 "
+        "centímetros e finalize no ar frio. Íons reduzem frizz em cabelo crespo ou volumoso, e "
+        "pouco em cabelo fino. Confira a voltagem antes de plugar em viagem. Grade traseira suja "
+        "é a causa mais comum de superaquecimento.",
+    ),
+    (
+        "Fechadura digital, videoporteiro e sensor de presença",
+        "seguranca",
+        (
+            "fechadura que abre com digital em vez de chave",
+            "videoporteiro mostra quem tocou a campainha?",
+            "fechadura digital abre se faltar luz?",
+            "sensor de presença infravermelho tem qual alcance?",
+        ),
+        "Fechadura com biometria dispensa chave e registra cada pessoa como um cadastro que dá pra "
+        "apagar depois. Antes de comprar, confira o que acontece sem energia: os bons modelos "
+        "usam pilha própria, avisam quando ela enfraquece e mantêm senha numérica ou chave física "
+        "de emergência. Videoporteiro Wi-Fi grava quem tocou a campainha. Sensor de presença é o "
+        "mais barato, mas dispara com animal de estimação se a sensibilidade não for ajustada.",
+    ),
 ]
 
 DOCUMENTOS = [

@@ -7,63 +7,152 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="chat">
-    <header class="chat-header">
-      <div class="perfil">
-        <span class="avatar" aria-hidden="true">Lu</span>
-        <span class="perfil-texto">
-          <strong>Cérebro da Lu</strong>
-          <small>assistente de compras</small>
-        </span>
-      </div>
-      <nav class="painel-abas">
-        <button id="catalogo-toggle" class="aba" type="button" aria-expanded="false">Catálogo</button>
-        <button id="pedidos-toggle" class="aba" type="button" aria-expanded="false">Pedidos</button>
-      </nav>
-    </header>
-
-    <div id="catalogo-panel" class="painel hidden">
-      <div class="painel-filtros">
-        <select id="catalogo-categoria" aria-label="Filtrar por categoria">
-          <option value="">Todas as categorias</option>
-        </select>
-        <input id="catalogo-busca" type="search" placeholder="Buscar produto..." autocomplete="off">
-        <button id="catalogo-comparar" class="botao-secundario" type="button" hidden>Comparar categoria</button>
-        <span id="catalogo-contagem" class="painel-contagem"></span>
-      </div>
-      <div id="catalogo-lista" class="vitrine"></div>
-    </div>
-
-    <div id="pedidos-panel" class="painel hidden">
-      <div class="painel-filtros">
-        <button id="pedidos-atualizar" class="botao-secundario" type="button">Atualizar</button>
-        <span id="pedidos-contagem" class="painel-contagem"></span>
-      </div>
-      <div id="pedidos-lista" class="cards"></div>
-    </div>
-
-    <main id="messages" class="messages" aria-live="polite"></main>
-
-    <p id="conexao-aviso" class="conexao-aviso" role="status" hidden>
-      Sem contato com o servidor. As atualizações de pedido voltam sozinhas quando a conexão retornar.
-    </p>
-
-    <div id="digitando" class="digitando" hidden>
-      <span class="avatar avatar-pequeno" aria-hidden="true">Lu</span>
-      <span class="digitando-balao">
-        <span class="ponto"></span><span class="ponto"></span><span class="ponto"></span>
-      </span>
-    </div>
-
-    <form id="chat-form" class="chat-form">
-      <input id="chat-input" type="text" placeholder="Mensagem" autocomplete="off" autofocus>
-      <button id="chat-enviar" type="submit" aria-label="Enviar mensagem">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-          <path d="M3 20.5l18-8.5L3 3.5V10l12 2-12 2z" fill="currentColor"/>
-        </svg>
-      </button>
-    </form>
+  <!--
+    Barra do simulador. Fica de propósito fora da moldura e com outra cara:
+    é o que o cliente NÃO vê no WhatsApp. Tudo daqui pra baixo é o que ele
+    veria; tudo aqui em cima é andaime de teste.
+  -->
+  <div class="simulador">
+    <span class="simulador-marca">simulador</span>
+    <span class="simulador-texto">
+      conversando do número
+      <strong id="simulador-numero">…</strong>
+    </span>
+    <button id="trocar-numero" class="simulador-acao" type="button">Trocar</button>
   </div>
+
+  <!-- Tela de identificação: no canal real o número vem no envelope da
+       mensagem, aqui alguém precisa dizer de qual aparelho está falando. -->
+  <section id="entrada" class="entrada" hidden>
+    <div class="entrada-cartao">
+      <span class="avatar avatar-grande" aria-hidden="true">Lu</span>
+      <h1>Cérebro da Lu</h1>
+      <p class="entrada-texto">
+        Qual número de WhatsApp vai conversar com a Lu? Cada número tem a
+        própria conversa, os próprios pedidos e o próprio cadastro.
+      </p>
+      <form id="entrada-form" class="entrada-form">
+        <div class="entrada-campo">
+          <span class="entrada-ddi">+55</span>
+          <input id="entrada-telefone" type="tel" inputmode="tel"
+                 placeholder="11 98888-1234" autocomplete="tel" autofocus>
+        </div>
+        <p id="entrada-erro" class="entrada-erro" role="alert" hidden></p>
+        <button type="submit" class="botao-primario entrada-avancar">Começar a conversa</button>
+      </form>
+      <p class="entrada-dica">ou use um número de exemplo</p>
+      <div id="entrada-exemplos" class="entrada-exemplos"></div>
+    </div>
+  </section>
+
+  <!-- O "celular": tudo dentro daqui é o que o cliente veria no WhatsApp. -->
+  <div class="aparelho">
+    <div class="chat">
+      <header class="chat-header">
+        <span class="header-voltar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <div class="perfil">
+          <span class="avatar" aria-hidden="true">Lu</span>
+          <span class="perfil-texto">
+            <strong>Lu</strong>
+            <small id="perfil-status">online</small>
+          </span>
+        </div>
+        <!-- Ícones de chamada são cenário, não controle: no WhatsApp eles
+             existem, aqui não há o que ligar. Por isso não são botões. -->
+        <span class="header-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M3 7h11v10H3zM14 11l6-3v8l-6-3z" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="header-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M6 3l3 5-2 2a12 12 0 005 5l2-2 5 3-2 4c-8 0-14-6-14-14z" fill="none"
+                  stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <button id="menu-botao" class="header-icone header-botao" type="button"
+                aria-haspopup="true" aria-expanded="false" aria-label="Mais opções">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <circle cx="12" cy="5" r="1.8" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+            <circle cx="12" cy="19" r="1.8" fill="currentColor"/>
+          </svg>
+        </button>
+        <div id="menu" class="menu" hidden role="menu">
+          <button id="catalogo-toggle" type="button" role="menuitem" aria-expanded="false">Catálogo</button>
+          <button id="pedidos-toggle" type="button" role="menuitem" aria-expanded="false">Meus pedidos</button>
+          <button id="menu-trocar" type="button" role="menuitem">Trocar de número</button>
+        </div>
+      </header>
+
+      <main id="messages" class="messages" aria-live="polite"></main>
+
+      <p id="conexao-aviso" class="conexao-aviso" role="status" hidden>
+        Sem contato com o servidor. As atualizações de pedido voltam sozinhas quando a conexão retornar.
+      </p>
+
+      <div id="anexo-previa" class="anexo-previa" hidden>
+        <img id="anexo-imagem" alt="Foto que você vai enviar">
+        <button id="anexo-remover" type="button" class="anexo-remover" aria-label="Remover foto">remover</button>
+      </div>
+
+      <form id="chat-form" class="chat-form">
+        <input id="anexo-arquivo" type="file" accept="image/*" hidden>
+        <div class="chat-campo">
+          <input id="chat-input" type="text" placeholder="Mensagem" autocomplete="off">
+          <button id="anexo-botao" type="button" class="botao-anexo" aria-label="Anexar foto de um produto">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="M21 12.5l-8.6 8.6a5 5 0 01-7-7l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <button id="chat-enviar" type="submit" aria-label="Enviar mensagem">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M3 20.5l18-8.5L3 3.5V10l12 2-12 2z" fill="currentColor"/>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Catálogo e pedidos não existem no WhatsApp, então entram como
+           folha por cima da conversa, saindo do menu, em vez de virarem
+           abas fixas no cabeçalho. -->
+      <section id="catalogo-panel" class="painel hidden" aria-label="Catálogo">
+        <div class="painel-topo">
+          <strong>Catálogo</strong>
+          <button class="painel-fechar" type="button" aria-label="Fechar catálogo">&#10005;</button>
+        </div>
+        <div class="painel-filtros">
+          <select id="catalogo-categoria" aria-label="Filtrar por categoria">
+            <option value="">Todas as categorias</option>
+          </select>
+          <input id="catalogo-busca" type="search" placeholder="Buscar produto..." autocomplete="off">
+          <button id="catalogo-comparar" class="botao-secundario" type="button" hidden>Comparar categoria</button>
+          <span id="catalogo-contagem" class="painel-contagem"></span>
+        </div>
+        <div id="catalogo-lista" class="vitrine"></div>
+      </section>
+
+      <section id="pedidos-panel" class="painel hidden" aria-label="Meus pedidos">
+        <div class="painel-topo">
+          <strong>Meus pedidos</strong>
+          <button class="painel-fechar" type="button" aria-label="Fechar pedidos">&#10005;</button>
+        </div>
+        <div class="painel-filtros">
+          <button id="pedidos-atualizar" class="botao-secundario" type="button">Atualizar</button>
+          <span id="pedidos-contagem" class="painel-contagem"></span>
+        </div>
+        <div id="pedidos-lista" class="cards"></div>
+      </section>
+    </div>
+  </div>
+  <script src="/static/formatacao.js"></script>
   <script src="/static/script.js"></script>
 </body>
 </html>

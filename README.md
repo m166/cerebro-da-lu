@@ -23,6 +23,25 @@ cp .env.example .env
 Edite o `.env` e coloque sua chave da Groq (gere uma grátis, sem cartão de
 crédito, em https://console.groq.com/keys).
 
+O banco é **PostgreSQL com a extensão pgvector**, que guarda os embeddings
+da base de conhecimento. Crie os dois bancos (o segundo é da suíte de
+testes, que esvazia as tabelas a cada caso):
+
+```bash
+createdb cerebro_lu && createdb cerebro_lu_test
+for db in cerebro_lu cerebro_lu_test; do
+  psql -d $db -c 'CREATE EXTENSION IF NOT EXISTS vector'
+done
+```
+
+Quem vem da versão em SQLite traz a conversa e os pedidos antigos com:
+
+```bash
+python -m scripts.migrar_sqlite_para_postgres
+```
+
+O `cerebro.db` não é apagado, fica como backup.
+
 ## Rodando
 
 ```bash
@@ -39,9 +58,18 @@ cp .env.example .env   # coloque a GROQ_API_KEY
 docker compose up --build
 ```
 
-O banco fica num volume, então atualizar a imagem não apaga conversa. O
-modelo de embedding é baixado na construção da imagem, e não na primeira
-pergunta, senão o primeiro cliente esperaria os 470MB.
+**O simulador não sobe junto.** A imagem não copia `static/`, e a variável
+`SIMULADOR=0` desliga a tela e o endpoint que deixa reivindicar um número:
+publicado, ele permitiria a qualquer pessoa digitar o telefone de outra e ler
+a conversa dela. A app publicada serve a API, responde 401 no que é do
+cliente enquanto não houver o webhook do WhatsApp pra dizer quem está
+falando, e mantém catálogo e conhecimento abertos.
+
+O compose sobe dois serviços: a app e um `pgvector/pgvector:pg17`, que é
+o Postgres com a extensão já compilada. O banco fica num volume, então
+atualizar a imagem não apaga conversa. O modelo de embedding é baixado na
+construção da imagem, e não na primeira pergunta, senão o primeiro cliente
+esperaria os 470MB.
 
 **Não validado:** o `Dockerfile`, o `docker-compose.yml` e o workflow de CI
 foram escritos sem Docker e sem remote git disponíveis, então nunca foram
@@ -54,6 +82,15 @@ pytest
 ```
 
 Rápidos e sem custo: não chamam a Groq nem baixam o modelo de embedding.
+Precisam de um PostgreSQL no ar (usam o banco `cerebro_lu_test`).
+
+As funções puras do frontend têm teste próprio, no runner embutido do node:
+
+```bash
+node --test tests/frontend/formatacao.test.js
+```
+
+O `pytest` também os executa, e pula se não houver node instalado.
 
 ## Avaliação
 
@@ -75,14 +112,20 @@ modelo, sem rodar o loop, então não cria pedido nem escreve histórico.
 
 | Métrica | Resultado |
 | --- | --- |
-| acerto@1 (documento certo em 1º) | 49/52 (94,2%) |
-| acerto@3 | 52/52 (100%) |
-| MRR | 0,968 |
-| cobertura do domínio (sobrevive ao corte) | 52/52 (100%) |
+| acerto@1 (documento certo em 1º) | 48/52 (92,3%) |
+| acerto@3 | 51/52 (98,1%) |
+| MRR | 0,949 |
+| cobertura do domínio (sobrevive ao corte) | 51/52 (98,1%) |
 | rejeição de pergunta fora de escopo | 7/8 |
 | ferramenta correta | 18/18 (100%) |
 | respondeu sem consultar ferramenta | 0/18 |
 | conversa sem disparar ferramenta | 3/3 |
+
+As três primeiras linhas são da execução mais recente, depois de o corpus ir
+de 40 pra 52 documentos e passar a cobrir as 39 categorias. O acerto@1 era
+94,2% com 40 documentos: cobrir 12 categorias novas custou um caso. As
+linhas de ferramenta são da execução anterior, `python -m evals ferramentas`
+não foi rodado desde então porque consome cota diária da Groq.
 
 A avaliação de ferramenta varia entre execuções, o modelo não é
 determinístico, e alguns casos têm mais de uma escolha defensável. O
@@ -97,12 +140,55 @@ A Lu é uma vendedora/atendente virtual. O cliente conversa em linguagem
 natural e ela usa **tool calling** (function calling da Groq) pra acionar
 funções de backend (consulta de catálogo, criação de pedido, rastreio e
 outras) em vez de só "conversar". As funções hoje rodam sobre dados mockados
-(catálogo fixo, pedidos em SQLite), simulando o que seria uma integração
+(catálogo fixo, pedidos em PostgreSQL), simulando o que seria uma integração
 real com sistemas do Magalu (catálogo, estoque, logística, financeiro).
+
+### O canal é o WhatsApp
+
+O destino da Lu é atender dentro do WhatsApp, e isso muda o produto, não
+só a entrega: o cliente é identificado pelo **número**, manda **foto** e
+**áudio**, e espera resposta de mensagem, não de site.
+
+Por isso a interface de teste é um **simulador do WhatsApp**, com a mesma
+paleta, o mesmo fundo de rabiscos, o mesmo cabeçalho e os mesmos tiques de
+entrega. Uma barra escura no topo, deliberadamente fora do estilo do app,
+separa o que o cliente veria do que é andaime: nela fica o número que está
+"falando" e o botão de trocar de número.
+
+O que já está de pé desse caminho: identidade por telefone, leitura de foto
+e as **regras da Cloud API dentro do código** (`app/whatsapp.py`). O que
+falta: áudio e o transporte em si (não há webhook, e o provedor ainda não
+foi escolhido).
+
+Estar adequado ao canal significa, na prática:
+
+- **Aviso de pedido é template aprovado, não texto livre.** Mensagem
+  espontânea fora da janela de 24 horas contada da última fala do cliente
+  não é entregue pelo WhatsApp. Como o aviso de "saiu para entrega" sai
+  sozinho dias depois, ele nasce como template UTILITY com parâmetros
+  posicionais, pronto pra cadastrar na Meta.
+- **A mesma frase serve os dois lados.** O texto que aparece no simulador é
+  renderizado do mesmo template que iria pra API, então a tela nunca mostra
+  uma coisa e o cliente recebe outra.
+- **Formatação é a do WhatsApp, não markdown.** Negrito é `*assim*`, com um
+  asterisco. Com dois, o cliente veria os asteriscos.
+- Os limites do canal (1024 no corpo do template, 4096 no texto livre, 3
+  botões, 10 linhas de lista) são constantes conferidas por teste.
+
+Ligar o canal de verdade passou a ser escrever o transporte: o `sessao_id`
+já é o número no formato do `wa_id`, e `services.notificacao_para_envio`
+já devolve o payload pronto.
 
 ### Funcionalidades
 
-- **Catálogo de 113 produtos** em 27 categorias, com no mínimo 4 produtos
+- **Identidade pelo telefone**: a conversa, os pedidos e o cadastro
+  pertencem ao número, não ao navegador. Voltar de outro aparelho com o
+  mesmo número reencontra tudo; trocar de número é ser outra pessoa.
+- **Simulador do WhatsApp** como interface de teste, com troca de número
+  pra ensaiar mais de um cliente.
+- **Foto do produto**: o cliente fotografa o que procura e a Lu diz se a
+  loja tem algo parecido.
+- **Catálogo de 184 produtos** em 39 categorias, com no mínimo 4 produtos
   por categoria, de propósito, pra que comparar opções faça sentido.
 - **Consultar pedidos** (mockados), status, itens, valor.
 - **Gerar pedidos novos**: a partir da conversa ("quero comprar X").
@@ -141,15 +227,15 @@ app/
   config.py         env vars, caminhos e limites
   models.py         DDL das tabelas + constantes de domínio
   schemas.py        Pydantic: contratos de entrada e saída
-  database.py       conexão SQLite + init_db
+  database.py       conexão PostgreSQL (psycopg) + init_db
   repositories.py   acesso a dados (mensagens, pedidos, catálogo, RAG)
   services.py       regras de negócio
   exceptions.py     erros de domínio
-  vectorstore.py    índice vetorial do RAG (embeddings + similaridade)
+  vectorstore.py    índice do RAG em pgvector (embeddings + similaridade)
   routers/          views.py, chat.py, produtos.py, pedidos.py
   ai/               client.py (Groq), tools.py (function calling), chat.py (loop)
-  data/catalogo.py     os 113 produtos mockados
-  data/conhecimento.py base de conhecimento do RAG (40 documentos)
+  data/catalogo.py     os 184 produtos mockados
+  data/conhecimento.py base de conhecimento do RAG (52 documentos)
 persona.md          system prompt da Lu
 static/             frontend vanilla (HTML/CSS/JS): chat + catálogo
 tests/              suíte pytest espelhando as camadas
@@ -164,8 +250,15 @@ agora é validar o fluxo de produto.
 
 ### Endpoints principais
 
+Os endpoints de conversa e de pedido exigem identificação e respondem
+**401** sem ela. Catálogo, categorias e base de conhecimento ficam
+abertos: são da loja, não de um cliente.
+
 | Método | Rota | O que faz |
 | --- | --- | --- |
+| POST | `/api/sessao` | identifica o cliente pelo telefone |
+| GET | `/api/sessao` | quem está falando (401 se ninguém) |
+| DELETE | `/api/sessao` | esquece o número, sem apagar a conversa |
 | POST | `/api/chat` | conversa com a Lu (com tool calling) |
 | GET | `/api/history` | histórico persistido da conversa |
 | GET | `/api/notificacoes` | avanços de status desde a última consulta |
@@ -188,7 +281,7 @@ agora é validar o fluxo de produto.
 1. ~~LLM + persona + interface de chat~~
 2. ~~Memória de conversa persistente entre execuções~~
 3. ~~**Pivot para "Cérebro da Lu"**~~
-   - ~~Catálogo mockado (113 produtos, 27 categorias) + estoque~~
+   - ~~Catálogo mockado (184 produtos, 39 categorias) + estoque~~
    - ~~Criar/consultar pedidos mockados~~
    - ~~Sugestão de produto (preço/prazo/avaliação)~~
    - ~~Comparação de produtos lado a lado~~
@@ -215,7 +308,14 @@ agora é validar o fluxo de produto.
      de tool que empurravam pra `listar_categorias` à toa)~~
    - ~~Iteração 2: acerto@1 do retrieval de 75% para 94,2%, enriquecendo
      os documentos com as perguntas que respondem~~
-7. Rename final da pasta/projeto pra "Cérebro da Lu".
+7. **Levar a Lu pro WhatsApp**
+   - ~~Leitura de foto do produto (modelo com visão em duas etapas)~~
+   - ~~Identidade pelo telefone: sessão, cadastro e migração de quem já
+     usava o app~~
+   - ~~Interface de teste simulando o WhatsApp~~
+   - Áudio: transcrever o que o cliente falar e responder em texto
+   - Canal real: webhook do provedor escolhido, entrega e status de leitura
+8. Rename final da pasta/projeto pra "Cérebro da Lu".
 
 ## Estado atual
 
@@ -224,7 +324,7 @@ agora é validar o fluxo de produto.
 - 11 ferramentas disponíveis ao modelo: busca de produto, base de
   conhecimento, categorias, estoque, sugestão, comparação,
   criação/consulta/rastreio de pedido, agendamento e 2ª via.
-- Histórico persistido em SQLite, sobrevive a refresh e restart.
+- Histórico persistido em PostgreSQL, sobrevive a refresh, restart e redeploy.
 - Catálogo, pedidos, estoque, rastreio, agendamento e 2ª via são **dados
   mockados**, pensados pra simular as integrações reais que um produto
   como esse teria no Magalu.
@@ -232,7 +332,10 @@ agora é validar o fluxo de produto.
   aviso automático no chat a cada mudança.
 - A busca exposta ao modelo devolve no máximo 10 produtos por vez (com o
   total encontrado), pra não estourar o contexto com 113 itens.
-- Ainda não há autenticação nem multi-usuário, é single-user, uso local.
+- Cada telefone tem a própria conversa, os próprios pedidos e o próprio
+  cadastro. Não há senha nem verificação por SMS: quem digita o número
+  entra, o que é adequado a uma demonstração e **não seria** num canal
+  real, onde quem garante o número é o próprio WhatsApp.
 
 ### Por que cada documento tem uma lista de perguntas
 
@@ -296,7 +399,46 @@ prompt, então continuam visíveis por quantas mensagens a conversa tiver,
 por poucos tokens. A regra é essa: dado que se repete em todo pedido é
 cadastro, o resto é conversa.
 
-### Limite de tokens da Groq
+O telefone é a exceção: ele entra no prompt junto dos outros, mas vem da
+sessão, não do cadastro, e o modelo **não pode gravá-lo**. É dado do
+canal, e não do cliente: no WhatsApp o número é o remetente, ninguém
+digita o próprio. Se a Lu pudesse gravar, bastaria um cliente dizer que
+mudou de celular pra assumir o número, e o histórico, de outro.
+
+### Por que a sessão é o telefone
+
+Antes, cada navegador ganhava um id aleatório num cookie. Resolvia o
+vazamento de histórico, mas era uma identidade que só existia naquele
+navegador: limpar o cookie perdia a conversa, e nada disso se pareceria
+com o canal de destino.
+
+No WhatsApp a identidade **é** o número. Adotar a mesma chave aqui fez a
+conversa deixar de morar no cookie e passar a morar na pessoa, e alinhou o
+simulador com o canal real: o formato gravado (`5511988881234`, só dígitos
+com DDI) é o mesmo `wa_id` que a Cloud API da Meta entrega no webhook, e
+`app/telefone.py` normaliza qualquer jeito de digitar pra ele.
+
+Quem já usava o app tinha cookie com id aleatório. No primeiro acesso, o
+número informado adota a conversa daquele cookie, uma vez só, e só se o
+número ainda não tiver dado nenhum: mesclar dois cadastros seria pior do
+que não migrar, e não teria volta.
+
+### Limites de tokens da Groq
+
+A conta free tem **dois** tetos: 8000 tokens por minuto e 200 mil por dia.
+Vale saber a diferença porque a saída não é a mesma:
+
+- **Por minuto** é questão de ritmo. A Groq diz em quantos segundos dá pra
+  tentar de novo, e o chat espera e repete em vez de devolver erro: uma
+  resposta em 4 segundos é melhor que um erro imediato.
+- **Por dia** é o que aparece quando se testa muito contra o modelo real,
+  e libera só horas depois. Aí o cliente é avisado na hora, com o prazo,
+  porque não há o que esperar dentro de uma requisição.
+
+A mensagem diz qual dos dois foi batido. Antes ela dizia "por minuto" em
+qualquer caso, e quem lia esperava um minuto e batia no mesmo erro.
+
+#### Por que o prompt é montado em partes
 
 A conta free trabalha com 8000 tokens por minuto. Cada requisição de chat
 carrega a persona (~920 tokens) e os schemas das ferramentas (~1400) antes
@@ -346,7 +488,9 @@ persona, que manda a Lu admitir quando a base não cobre.
 - Na primeira execução o modelo de embedding baixa (~470MB) e fica em
   cache. A carga é lazy: só acontece na primeira busca de conhecimento.
 - Os testes nunca chamam a Groq (mockada) nem baixam o modelo de embedding
-  (encoder falso na fixture `rag_sem_download`), e sempre usam um SQLite
-  temporário.
+  (encoder falso na fixture `rag_sem_download`), e sempre usam o banco
+  `cerebro_lu_test`, nunca o do app.
 - Convenções e direção das dependências entre camadas estão no
   `CLAUDE.md`.
+- O que ainda pode ser feito, o que já foi descartado e o critério pra
+  decidir estão no `MELHORIAS.md`.

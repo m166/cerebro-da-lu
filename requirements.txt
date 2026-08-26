@@ -8,3 +8,6 @@ sentence-transformers
 # O torch disponível pra Python 3.9 (2.2.x) foi compilado contra NumPy 1.x;
 # com NumPy 2 o encode() quebra em "Numpy is not available".
 numpy<2
+# Driver do PostgreSQL. O extra [binary] traz o libpq compilado junto, o que
+# dispensa ter pg_config e cabeçalhos do Postgres na máquina que instala.
+psycopg[binary]

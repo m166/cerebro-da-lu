@@ -1,98 +1,90 @@
-"""Conexão com o SQLite e criação do schema."""
+"""Conexão com o PostgreSQL e criação do schema.
 
-import sqlite3
-from pathlib import Path
+O driver é o psycopg 3. Duas diferenças em relação ao `sqlite3` que estava
+aqui antes e que aparecem no código todo:
+
+- **O placeholder é `%s`, não `?`.** Vale pra qualquer parâmetro, inclusive
+  o `LIMIT %s` das consultas de histórico.
+- **`conn.execute` existe, mas quem tem `.fetchone()` é o cursor.** O
+  psycopg devolve cursor nos dois casos, então as chamadas continuam se
+  parecendo com as antigas; o que muda é a fábrica de linha, que aqui é
+  `dict_row` em vez do `sqlite3.Row`.
+
+A conexão continua sendo aberta e fechada por operação, como no SQLite. Não
+virou pool porque o gargalo do app é a chamada ao modelo, não o banco, e
+pool com `--reload` esconde erro de conexão atrás de processo reiniciado.
+"""
+
 from typing import Optional
+
+import psycopg
+from psycopg.rows import dict_row
 
 from app import config, models
 
 
-def _conectar(caminho: Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(caminho)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_connection(dsn: Optional[str] = None) -> psycopg.Connection:
+    # Lê config.DATABASE_URL na chamada (não no import) pra que os testes
+    # possam apontar pro banco de teste sem recarregar o módulo.
+    alvo = dsn or config.DATABASE_URL
+    if not alvo:
+        # Falha aqui, e não com um padrão conveniente, porque o padrão óbvio
+        # (`localhost:5432`) é a porta de um container de trabalho nesta
+        # máquina. Conectar no banco errado por comodidade é o tipo de erro
+        # que só aparece depois que a tabela já foi truncada.
+        raise RuntimeError(
+            "DATABASE_URL não configurada. Copie .env.example para .env e "
+            "aponte pra um Postgres com a extensão pgvector. Atenção: a porta "
+            "5432 desta máquina é usada por outro projeto, escolha outra."
+        )
+    return psycopg.connect(alvo, row_factory=dict_row)
 
 
-def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
-    # Lê config.DB_PATH na chamada (não no import) pra que os testes possam
-    # trocar o caminho por um banco temporário.
-    caminho = db_path or config.DB_PATH
-
-    # Se o arquivo sumiu com o app no ar, o sqlite recria vazio e toda
-    # consulta passa a falhar com "no such table" até alguém reiniciar.
-    # Recriar o schema aqui custa um stat por conexão e evita esse estado.
-    if not Path(caminho).exists():
-        conn = _conectar(caminho)
-        _preparar_schema(conn)
-        return conn
-
-    return _conectar(caminho)
-
-
-def _criar_tabelas(conn: sqlite3.Connection) -> None:
+def _criar_tabelas(conn: psycopg.Connection) -> None:
+    # A extensão vem antes das tabelas: o tipo `vector` do índice do RAG só
+    # existe depois dela, e `CREATE TABLE` com coluna VECTOR falharia com
+    # "type vector does not exist".
+    conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
     for ddl in models.TABELAS:
         conn.execute(ddl)
+    conn.execute(
+        models.CREATE_CONHECIMENTO_VETORES.format(dimensoes=config.DIMENSOES_EMBEDDING)
+    )
     conn.commit()
 
 
-def _migrar_colunas(conn: sqlite3.Connection) -> None:
+def _migrar_colunas(conn: psycopg.Connection) -> None:
     """Acrescenta colunas novas em banco que já existe.
 
     O DDL usa `CREATE TABLE IF NOT EXISTS`, que não faz nada quando a tabela
-    já foi criada por uma versão anterior: sem isso, o `cerebro.db` de quem
-    já usava o app continuaria sem `codigo_rastreio` e toda consulta
-    quebraria. É idempotente, roda a cada init_db.
+    já foi criada por uma versão anterior: sem isso, um banco já publicado
+    continuaria sem `codigo_rastreio` e toda consulta quebraria.
+
+    No SQLite era preciso consultar o `PRAGMA table_info` antes, porque
+    `ALTER TABLE ADD COLUMN` repetido estourava com "duplicate column name".
+    O Postgres tem `IF NOT EXISTS` no próprio ALTER, então a checagem manual
+    saiu. Continua idempotente e roda a cada init_db.
     """
     for tabela, colunas in models.COLUNAS_ADICIONADAS.items():
-        existentes = {linha["name"] for linha in conn.execute(f"PRAGMA table_info({tabela})")}
-        if not existentes:
+        existe = conn.execute(
+            "SELECT to_regclass(%s) AS tabela", (f"public.{tabela}",)
+        ).fetchone()["tabela"]
+        if not existe:
             continue
         for nome, tipo in colunas:
-            if nome not in existentes:
-                conn.execute(f"ALTER TABLE {tabela} ADD COLUMN {nome} {tipo}")
+            conn.execute(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS {nome} {tipo}")
     conn.commit()
 
 
-def _migrar_perfil(conn: sqlite3.Connection) -> None:
-    """Reconstrói `perfil` quando ele ainda tem a chave primária antiga.
-
-    A chave passou de `chave` pra `sessao_id + chave`, e SQLite não altera
-    chave primária com ALTER TABLE: é preciso criar a tabela nova, copiar e
-    trocar. As linhas antigas ficam sem sessão, e são adotadas depois pelo
-    primeiro visitante, junto com o resto dos dados órfãos.
-    """
-    tabelas = {
-        linha["name"]
-        for linha in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    }
-    colunas = {linha["name"] for linha in conn.execute("PRAGMA table_info(perfil)")}
-
-    # Uma tentativa anterior pode ter renomeado a tabela e morrido antes de
-    # copiar. Nesse caso a tabela nova existe vazia e o dado está na antiga,
-    # então a recuperação é a mesma coisa: copiar e só então descartar.
-    precisa_copiar = models.PERFIL_ANTIGO in tabelas
-    if not precisa_copiar:
-        if not colunas or "sessao_id" in colunas:
-            return
-        conn.execute(f"ALTER TABLE perfil RENAME TO {models.PERFIL_ANTIGO}")
-
-    conn.execute(models.CREATE_PERFIL)
-    conn.execute(
-        f"""
-        INSERT OR REPLACE INTO perfil (sessao_id, chave, valor, atualizado_em)
-        SELECT NULL, chave, valor, atualizado_em FROM {models.PERFIL_ANTIGO}
-        """
-    )
-    # Só descarta depois de a cópia ter dado certo: a versão anterior deste
-    # código descartava sem conferir, e teria perdido o cadastro se a ordem
-    # das operações fosse outra.
-    copiadas = conn.execute("SELECT COUNT(*) c FROM perfil").fetchone()["c"]
-    originais = conn.execute(
-        f"SELECT COUNT(*) c FROM {models.PERFIL_ANTIGO}"
-    ).fetchone()["c"]
-    if copiadas >= originais:
-        conn.execute(f"DROP TABLE {models.PERFIL_ANTIGO}")
-    conn.commit()
+# As tabelas que pertencem a um visitante, e não à loja. Toda consulta a elas
+# filtra por sessão, e toda migração de sessão passa por todas.
+# `conhecimento_vetores` não entra: é índice da loja, não dado de cliente.
+#
+# Esta tupla é a lista de verdade, não uma anotação: a fixture de teste zera
+# o que estiver aqui, e a adoção e a transferência percorrem o que estiver
+# aqui. Tabela nova de cliente que ficar de fora vaza entre sessões e entre
+# testes, e foi assim que `memoria` quase escapou.
+TABELAS_DO_VISITANTE = ("messages", "pedidos", "perfil", "memoria")
 
 
 def adotar_dados_orfaos(sessao_id: str) -> None:
@@ -104,21 +96,62 @@ def adotar_dados_orfaos(sessao_id: str) -> None:
     sobra linha órfã.
     """
     conn = get_connection()
-    for tabela in ("messages", "pedidos", "perfil"):
+    for tabela in TABELAS_DO_VISITANTE:
         conn.execute(
-            f"UPDATE {tabela} SET sessao_id = ? WHERE sessao_id IS NULL", (sessao_id,)
+            f"UPDATE {tabela} SET sessao_id = %s WHERE sessao_id IS NULL", (sessao_id,)
         )
     conn.commit()
     conn.close()
 
 
-def _preparar_schema(conn: sqlite3.Connection) -> None:
+def _tem_dados(conn: psycopg.Connection, sessao_id: str) -> bool:
+    return any(
+        conn.execute(
+            f"SELECT 1 FROM {tabela} WHERE sessao_id = %s LIMIT 1", (sessao_id,)
+        ).fetchone()
+        for tabela in TABELAS_DO_VISITANTE
+    )
+
+
+def transferir_sessao(de: str, para: str) -> bool:
+    """Passa conversa, pedidos e cadastro de uma sessão pra outra.
+
+    Existe por causa da virada pra identidade por telefone: quem já usava o
+    app tem um cookie com id aleatório, e sem isto abriria a tela, digitaria
+    o número e encontraria tudo vazio.
+
+    Quem diz de onde transferir é o cookie antigo do próprio navegador, não
+    uma varredura do banco. É a diferença entre mover a conversa certa e
+    despejar a de todo mundo no primeiro que digitar um número.
+
+    Só transfere pra número que ainda não tem nada: mesclar dois cadastros
+    seria pior do que não migrar, e não dá pra desfazer.
+    """
+    if de == para:
+        return False
+
+    conn = get_connection()
+    try:
+        if _tem_dados(conn, para) or not _tem_dados(conn, de):
+            return False
+        for tabela in TABELAS_DO_VISITANTE:
+            conn.execute(
+                f"UPDATE {tabela} SET sessao_id = %s WHERE sessao_id = %s", (para, de)
+            )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def _preparar_schema(conn: psycopg.Connection) -> None:
     _criar_tabelas(conn)
     _migrar_colunas(conn)
-    _migrar_perfil(conn)
 
 
-def init_db(db_path: Optional[Path] = None) -> None:
-    conn = get_connection(db_path)
-    _preparar_schema(conn)
-    conn.close()
+def init_db(dsn: Optional[str] = None) -> None:
+    conn = get_connection(dsn)
+    try:
+        _preparar_schema(conn)
+    finally:
+        conn.close()

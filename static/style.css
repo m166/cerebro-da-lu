@@ -1,11 +1,19 @@
+/* Paleta do WhatsApp. Os valores não são "um verde parecido": são os do
+   app, porque o objetivo desta tela é ensaiar o que o cliente vai ver lá.
+   Trocar um deles muda o quanto a simulação vale. */
 :root {
   color-scheme: light dark;
+  --fora: #d9dee0;
   --bg: #eae6df;
-  --panel: #f7f5f2;
+  --panel: #f0f2f5;
   --topo: #ffffff;
   --text: #111b21;
   --muted: #667781;
   --linha: rgba(17, 27, 33, 0.12);
+
+  --barra: #008069;
+  --barra-texto: #ffffff;
+  --barra-suave: rgba(255, 255, 255, 0.75);
 
   --user-bubble: #d9fdd3;
   --user-text: #111b21;
@@ -14,27 +22,29 @@
   --error-bubble: #fee2e2;
   --error-text: #991b1b;
 
-  --marca: #1d6f5c;
-  --acento: #2563eb;
-
-  --aviso-bubble: #fff5d6;
-  --aviso-text: #6b4e00;
-  --aviso-borda: #e6c34a;
-  --acento-suave: rgba(37, 99, 235, 0.22);
+  --marca: #008069;
+  --acento: #53bdeb;
+  --acento-suave: rgba(0, 128, 105, 0.22);
   --trilho: rgba(17, 27, 33, 0.18);
 
-  --fundo-conversa: #efe7de;
+  --fundo-conversa: #efeae2;
   --sombra: 0 1px 1px rgba(11, 20, 26, 0.13);
+  --sombra-alta: 0 6px 24px rgba(11, 20, 26, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --fora: #0a1014;
     --bg: #0b141a;
     --panel: #111b21;
     --topo: #202c33;
     --text: #e9edef;
     --muted: #8696a0;
     --linha: rgba(233, 237, 239, 0.12);
+
+    --barra: #202c33;
+    --barra-texto: #e9edef;
+    --barra-suave: rgba(233, 237, 239, 0.6);
 
     --user-bubble: #005c4b;
     --user-text: #e9edef;
@@ -45,15 +55,12 @@
 
     --marca: #00a884;
     --acento: #53bdeb;
-
-    --aviso-bubble: #2a2416;
-    --aviso-text: #f5d980;
-    --aviso-borda: #6b5a1f;
-    --acento-suave: rgba(83, 189, 235, 0.28);
+    --acento-suave: rgba(0, 168, 132, 0.28);
     --trilho: rgba(233, 237, 239, 0.2);
 
     --fundo-conversa: #0b141a;
     --sombra: 0 1px 1px rgba(0, 0, 0, 0.35);
+    --sombra-alta: 0 6px 24px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -64,50 +71,132 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
+  background: var(--fora);
   color: var(--text);
   height: 100vh;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --- Barra do simulador --------------------------------------------------- */
+
+/* Deliberadamente sem cara de WhatsApp: quem olha a tela precisa saber num
+   relance o que é o app e o que é andaime de teste. */
+.simulador {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: #0f1c22;
+  color: #b6c2c7;
+  font-size: 0.75rem;
+}
+
+.simulador-marca {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid rgba(182, 194, 199, 0.35);
+  border-radius: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.62rem;
+}
+
+.simulador-texto strong {
+  color: #e9edef;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+
+.simulador-acao {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid rgba(182, 194, 199, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.simulador-acao:hover {
+  background: rgba(182, 194, 199, 0.15);
+  color: #fff;
+}
+
+/* --- Moldura do aparelho -------------------------------------------------- */
+
+.aparelho {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 480px;
+  min-height: 0;
+  display: flex;
 }
 
 .chat {
-  width: 100%;
-  max-width: 860px;
-  height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: var(--panel);
   /* Item flex não encolhe abaixo do conteúdo mínimo dos filhos sem isto, e
      era o que empurrava a tela pra fora no celular. */
   min-width: 0;
+  /* Âncora do menu e das folhas de catálogo/pedidos, que se posicionam em
+     relação ao aparelho e não à janela. */
+  position: relative;
+  overflow: hidden;
 }
 
-/* --- Cabeçalho ---------------------------------------------------------- */
+/* Só em tela larga vale desenhar o celular: no celular de verdade a tela
+   inteira já é o aparelho, e a moldura só roubaria espaço. */
+@media (min-width: 560px) {
+  .aparelho {
+    padding: 0.75rem 0.75rem 1rem;
+  }
+
+  .chat {
+    border-radius: 0.9rem;
+    box-shadow: var(--sombra-alta);
+  }
+}
+
+/* --- Cabeçalho ------------------------------------------------------------ */
 
 .chat-header {
-  padding: 0.6rem 1rem;
+  flex: 0 0 auto;
+  padding: 0.5rem 0.6rem;
   min-width: 0;
-  background: var(--topo);
-  border-bottom: 1px solid var(--linha);
+  background: var(--barra);
+  color: var(--barra-texto);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.header-voltar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  opacity: 0.9;
 }
 
 .perfil {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   min-width: 0;
   flex: 1 1 auto;
   overflow: hidden;
 }
 
 .avatar {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.35rem;
+  height: 2.35rem;
   flex: 0 0 auto;
   border-radius: 50%;
   background: var(--marca);
@@ -115,14 +204,34 @@ body {
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   letter-spacing: 0.02em;
+}
+
+/* No cabeçalho verde o avatar precisa de contraste próprio, senão vira um
+   círculo verde sobre verde. */
+.chat-header .avatar {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--barra-texto);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-header .avatar {
+    background: var(--marca);
+    color: #0b141a;
+  }
 }
 
 .avatar-pequeno {
   width: 1.75rem;
   height: 1.75rem;
   font-size: 0.7rem;
+}
+
+.avatar-grande {
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 1.15rem;
 }
 
 .perfil-texto {
@@ -133,7 +242,8 @@ body {
 
 .perfil-texto strong {
   font-size: 1rem;
-  line-height: 1.2;
+  line-height: 1.25;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -141,47 +251,234 @@ body {
 
 .perfil-texto small {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--barra-suave);
 }
 
-.painel-abas {
-  display: flex;
-  gap: 0.4rem;
+.header-icone {
+  width: 2.1rem;
+  height: 2.1rem;
   flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--barra-texto);
+  opacity: 0.9;
 }
 
-.aba {
-  padding: 0.4rem 0.8rem;
-  border-radius: 999px;
-  border: 1px solid var(--linha);
+.header-botao {
+  border: none;
   background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+.header-botao:hover {
+  background: rgba(255, 255, 255, 0.15);
+  opacity: 1;
+}
+
+/* --- Menu do cabeçalho ---------------------------------------------------- */
+
+.menu {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  z-index: 8;
+  min-width: 11rem;
+  padding: 0.35rem 0;
+  border-radius: 0.5rem;
+  background: var(--topo);
   color: var(--text);
-  font-size: 0.85rem;
+  box-shadow: var(--sombra-alta);
+  display: flex;
+  flex-direction: column;
+}
+
+.menu[hidden] {
+  display: none;
+}
+
+.menu button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.88rem;
   cursor: pointer;
 }
 
-.aba:hover {
-  background: var(--bg);
-}
-
-.aba.ativa {
-  background: var(--marca);
-  border-color: var(--marca);
-  color: #fff;
-}
-
-/* --- Painéis ------------------------------------------------------------ */
-
-.painel {
-  border-bottom: 1px solid var(--linha);
+.menu button:hover {
   background: var(--panel);
-  max-height: 52vh;
+}
+
+/* --- Tela de identificação ------------------------------------------------ */
+
+.entrada {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: var(--bg);
   overflow-y: auto;
-  padding: 0.75rem 1rem;
+}
+
+.entrada[hidden] {
+  display: none;
+}
+
+.entrada-cartao {
+  width: 100%;
+  max-width: 24rem;
+  padding: 1.75rem 1.5rem;
+  border-radius: 1rem;
+  background: var(--topo);
+  box-shadow: var(--sombra-alta);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.entrada-cartao h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.entrada-texto {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.entrada-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.entrada-campo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--marca);
+  padding-bottom: 0.35rem;
+}
+
+.entrada-ddi {
+  font-size: 1rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.entrada-campo input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+  padding: 0.25rem 0;
+}
+
+.entrada-campo input:focus {
+  outline: none;
+}
+
+.entrada-erro {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--error-text);
+}
+
+.entrada-erro[hidden] {
+  display: none;
+}
+
+.entrada-avancar {
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+}
+
+.entrada-dica {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.entrada-exemplos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.entrada-exemplo {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  cursor: pointer;
+}
+
+.entrada-exemplo:hover {
+  background: var(--panel);
+}
+
+/* --- Folhas de catálogo e pedidos ----------------------------------------- */
+
+/* Cobrem o aparelho inteiro, como uma tela que abre por cima da conversa.
+   Não são abas: no WhatsApp não existiria aba nenhuma no cabeçalho. */
+.painel {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--panel);
+  overflow-y: auto;
+  padding: 0 0.85rem 1rem;
 }
 
 .painel.hidden {
   display: none;
+}
+
+.painel-topo {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 -0.85rem 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--barra);
+  color: var(--barra-texto);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.painel-fechar {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.painel-fechar:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .painel-filtros {
@@ -197,7 +494,7 @@ body {
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
   border: 1px solid var(--linha);
-  background: var(--bg);
+  background: var(--topo);
   color: var(--text);
   font-size: 0.85rem;
 }
@@ -212,12 +509,12 @@ body {
   color: var(--muted);
 }
 
-/* --- Vitrine do catálogo ------------------------------------------------ */
+/* --- Vitrine do catálogo -------------------------------------------------- */
 
 .vitrine {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  gap: 0.7rem;
 }
 
 .produto {
@@ -260,12 +557,6 @@ body {
   color: var(--marca);
 }
 
-@media (prefers-color-scheme: dark) {
-  .produto-preco {
-    color: var(--acento);
-  }
-}
-
 .produto-meta {
   margin: 0;
   font-size: 0.72rem;
@@ -284,66 +575,71 @@ body {
   padding-top: 0.45rem;
 }
 
-/* --- Conversa ------------------------------------------------------------ */
+/* --- Conversa ------------------------------------------------------------- */
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 0.7rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.15rem;
   background-color: var(--fundo-conversa);
-  /* Trama discreta no lugar do fundo chapado, como num app de mensagem. */
-  background-image:
-    radial-gradient(circle at 25% 25%, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
-    radial-gradient(circle at 75% 75%, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image: url("/static/img/fundo-conversa.svg");
+  /* Menor que o ladrilho original (280px): o desenho fica na escala do
+     WhatsApp, discreto, em vez de virar ilustração de fundo. */
+  background-size: 200px 200px;
 }
 
 .separador-data {
   align-self: center;
   margin: 0.6rem 0;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
+  padding: 0.28rem 0.8rem;
+  border-radius: 0.45rem;
   background: var(--topo);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   box-shadow: var(--sombra);
 }
 
 .linha-mensagem {
   display: flex;
-  align-items: flex-end;
-  gap: 0.45rem;
-  /* Some o avatar e o espaçamento da conta: sem isso, 82% mais o avatar
-     estouravam a largura da tela no celular. */
-  max-width: min(82%, calc(100% - 2.5rem));
+  max-width: 85%;
   min-width: 0;
+  /* Balão de uma sequência do mesmo autor fica colado; a folga só separa
+     quem falou de quem respondeu, como no WhatsApp. */
+  margin-top: 0.1rem;
+}
+
+.linha-mensagem.abre-sequencia {
+  margin-top: 0.55rem;
 }
 
 .linha-mensagem.de-mim {
   align-self: flex-end;
-  flex-direction: row-reverse;
 }
 
 .linha-mensagem.da-lu {
   align-self: flex-start;
 }
 
-.linha-mensagem .avatar {
-  visibility: hidden;
+/* Mensagem que não abre sequência recua o tanto que o rabicho ocuparia, pra
+   que a coluna de balões fique alinhada. */
+.linha-mensagem.da-lu:not(.abre-sequencia) {
+  margin-left: 0.45rem;
 }
 
-.linha-mensagem.mostra-avatar .avatar {
-  visibility: visible;
+.linha-mensagem.de-mim:not(.abre-sequencia) {
+  margin-right: 0.45rem;
 }
 
 .bubble {
   position: relative;
-  padding: 0.45rem 0.7rem 1.15rem;
-  border-radius: 0.6rem;
-  line-height: 1.45;
+  padding: 0.4rem 0.65rem 1.1rem;
+  border-radius: 0.5rem;
+  line-height: 1.42;
   font-size: 0.92rem;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -355,90 +651,88 @@ body {
 .bubble.user {
   background: var(--user-bubble);
   color: var(--user-text);
-  border-top-right-radius: 0.15rem;
+  border-top-right-radius: 0;
 }
 
-.bubble.assistant {
+.bubble.assistant,
+.bubble.notificacao {
   background: var(--assistant-bubble);
   color: var(--assistant-text);
-  border-top-left-radius: 0.15rem;
+  border-top-left-radius: 0;
 }
 
-/* Rabicho do balão, o detalhe que dá a cara de app de mensagem. */
-.bubble.user::after,
-.bubble.assistant::after {
+/* Rabicho do balão, o detalhe que dá a cara de app de mensagem. Só na
+   primeira mensagem da sequência, que é onde o WhatsApp desenha. */
+.abre-sequencia .bubble.user::after,
+.abre-sequencia .bubble.assistant::after,
+.abre-sequencia .bubble.notificacao::after {
   content: "";
   position: absolute;
   top: 0;
   width: 0;
   height: 0;
-  border: 0.5rem solid transparent;
+  border: 0.45rem solid transparent;
 }
 
-.bubble.user::after {
-  right: -0.45rem;
+.abre-sequencia .bubble.user::after {
+  right: -0.4rem;
   border-top-color: var(--user-bubble);
   border-left-color: var(--user-bubble);
 }
 
-.bubble.assistant::after {
-  left: -0.45rem;
+.abre-sequencia .bubble.assistant::after,
+.abre-sequencia .bubble.notificacao::after {
+  left: -0.4rem;
   border-top-color: var(--assistant-bubble);
   border-right-color: var(--assistant-bubble);
 }
 
 .hora {
   position: absolute;
-  right: 0.6rem;
-  bottom: 0.35rem;
-  font-size: 0.65rem;
+  right: 0.55rem;
+  bottom: 0.3rem;
+  font-size: 0.63rem;
   color: var(--muted);
   display: flex;
   align-items: center;
   gap: 0.15rem;
 }
 
+.bubble.user .hora {
+  color: rgba(17, 27, 33, 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  .bubble.user .hora {
+    color: rgba(233, 237, 239, 0.6);
+  }
+}
+
+/* Um tique cinza quando a mensagem saiu, dois azuis quando a Lu leu. É o
+   sinal que o cliente usa pra saber se foi entregue, então vale simular. */
 .tique {
-  color: var(--acento);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   line-height: 1;
+  letter-spacing: -0.18em;
+  padding-right: 0.18em;
+}
+
+.tique.lido {
+  color: var(--acento);
 }
 
 .bubble.error {
   align-self: center;
   background: var(--error-bubble);
   color: var(--error-text);
-  font-size: 0.85rem;
-  padding-bottom: 0.45rem;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.7rem;
   box-shadow: none;
+  margin: 0.35rem 0;
 }
 
 .bubble.error::after {
   display: none;
-}
-
-/* --- Aviso de pedido ------------------------------------------------------ */
-
-.bubble.notificacao {
-  background: var(--aviso-bubble);
-  color: var(--aviso-text);
-  border: 1px solid var(--aviso-borda);
-  border-left-width: 4px;
-  padding-bottom: 1.15rem;
-}
-
-.bubble.notificacao::after {
-  display: none;
-}
-
-.notificacao-rotulo {
-  display: block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.2rem;
-  opacity: 0.85;
 }
 
 /* --- Cartão de produto dentro da conversa --------------------------------- */
@@ -446,28 +740,27 @@ body {
 .cartoes-produto {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
   align-self: flex-start;
-  max-width: min(82%, calc(100% - 2.5rem));
-  margin-left: 2.2rem;
-  margin-bottom: 0.35rem;
+  max-width: 85%;
+  margin: 0.35rem 0 0.3rem 0.45rem;
 }
 
 .cartao-produto {
   display: flex;
-  gap: 0.65rem;
+  gap: 0.6rem;
   align-items: center;
-  padding: 0.5rem;
-  border-radius: 0.6rem;
+  padding: 0.45rem;
+  border-radius: 0.5rem;
   background: var(--assistant-bubble);
   box-shadow: var(--sombra);
   border-left: 3px solid var(--marca);
 }
 
 .cartao-produto img {
-  width: 3.4rem;
-  height: 3.4rem;
-  border-radius: 0.5rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0.45rem;
   flex: 0 0 auto;
   background: var(--bg);
 }
@@ -482,21 +775,15 @@ body {
 
 .cartao-nome {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
 .cartao-preco {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--marca);
-}
-
-@media (prefers-color-scheme: dark) {
-  .cartao-preco {
-    color: var(--acento);
-  }
 }
 
 .cartao-meta {
@@ -538,12 +825,6 @@ body {
 .card-info {
   margin: 0;
   font-size: 0.8rem;
-}
-
-.card-alerta {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--error-text);
 }
 
 .card-detalhe {
@@ -701,6 +982,12 @@ body {
   font-weight: 600;
 }
 
+@media (prefers-color-scheme: dark) {
+  .botao-primario {
+    color: #0b141a;
+  }
+}
+
 .botao-secundario {
   border: 1px solid var(--linha);
   background: transparent;
@@ -718,57 +1005,7 @@ body {
   cursor: not-allowed;
 }
 
-/* --- Digitando e conexão --------------------------------------------------- */
-
-.digitando {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0 1.25rem 0.5rem;
-  background: var(--fundo-conversa);
-}
-
-.digitando[hidden] {
-  display: none;
-}
-
-.digitando-balao {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 0.6rem;
-  background: var(--assistant-bubble);
-  box-shadow: var(--sombra);
-}
-
-.ponto {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--muted);
-  animation: pulsar 1.2s infinite ease-in-out;
-}
-
-.ponto:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.ponto:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes pulsar {
-  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-0.15rem); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ponto {
-    animation: none;
-    opacity: 0.6;
-  }
-}
+/* --- Aviso de conexão ------------------------------------------------------ */
 
 .conexao-aviso {
   margin: 0;
@@ -783,35 +1020,47 @@ body {
   display: none;
 }
 
-/* --- Campo de mensagem ------------------------------------------------------ */
+/* --- Campo de mensagem ----------------------------------------------------- */
 
 .chat-form {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  background: var(--topo);
-  border-top: 1px solid var(--linha);
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem 0.5rem;
+  background: var(--panel);
 }
 
-.chat-form input {
+/* A pilha do WhatsApp: um comprimido claro com o texto e o clipe dentro, e
+   o botão de enviar solto ao lado, num círculo verde. */
+.chat-campo {
   flex: 1;
-  padding: 0.7rem 1rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: var(--bg);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.3rem 0 0.9rem;
+  border-radius: 1.35rem;
+  background: var(--topo);
+}
+
+.chat-campo input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0;
+  border: none;
+  background: transparent;
   color: var(--text);
   font-size: 0.95rem;
 }
 
-.chat-form input:focus {
+.chat-campo input:focus {
   outline: none;
-  border-color: var(--marca);
 }
 
-.chat-form button {
-  width: 2.75rem;
-  height: 2.75rem;
+.chat-form > button[type="submit"] {
+  width: 2.6rem;
+  height: 2.6rem;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -822,40 +1071,94 @@ body {
   cursor: pointer;
 }
 
-.chat-form button:hover {
+@media (prefers-color-scheme: dark) {
+  .chat-form > button[type="submit"] {
+    color: #0b141a;
+  }
+}
+
+.chat-form > button[type="submit"]:hover {
   opacity: 0.9;
 }
 
-.chat-form input:disabled,
+.chat-campo input:disabled,
 .chat-form button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-@media (max-width: 560px) {
-  .messages {
-    padding: 0.75rem;
-  }
+/* --- Foto anexada ---------------------------------------------------------- */
 
-  .linha-mensagem,
-  .cartoes-produto {
-    max-width: calc(100% - 2.2rem);
-  }
+.anexo-previa {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--panel);
+  border-top: 1px solid var(--linha);
+}
 
-  .cartoes-produto {
-    margin-left: 2.2rem;
-  }
+.anexo-previa[hidden] {
+  display: none;
+}
 
-  .digitando {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
+.anexo-previa img {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  background: var(--bg);
+}
 
+.anexo-remover {
+  border: 1px solid var(--linha);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.botao-anexo {
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.botao-anexo:hover {
+  color: var(--text);
+}
+
+.botao-anexo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Foto que o cliente mandou, dentro do balão dele. */
+.bubble-foto {
+  display: block;
+  max-width: 12rem;
+  border-radius: 0.4rem;
+  margin-bottom: 0.3rem;
+}
+
+/* --- Telas estreitas ------------------------------------------------------- */
+
+@media (max-width: 420px) {
   .vitrine {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
   }
 
-  .perfil-texto small {
+  .simulador-marca {
     display: none;
   }
 }

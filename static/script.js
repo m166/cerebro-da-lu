@@ -1,8 +1,14 @@
+// `comFormatacao` e `formatarData` moram em formatacao.js, carregado
+// antes deste arquivo: são puras e por isso têm teste em node.
 const messagesEl = document.getElementById("messages");
 const formEl = document.getElementById("chat-form");
 const inputEl = document.getElementById("chat-input");
 const enviarEl = document.getElementById("chat-enviar");
-const digitandoEl = document.getElementById("digitando");
+const perfilStatusEl = document.getElementById("perfil-status");
+
+const menuBotaoEl = document.getElementById("menu-botao");
+const menuEl = document.getElementById("menu");
+const menuTrocarEl = document.getElementById("menu-trocar");
 
 const catalogoToggleEl = document.getElementById("catalogo-toggle");
 const catalogoPanelEl = document.getElementById("catalogo-panel");
@@ -19,27 +25,149 @@ const pedidosContagemEl = document.getElementById("pedidos-contagem");
 const pedidosAtualizarEl = document.getElementById("pedidos-atualizar");
 const conexaoAvisoEl = document.getElementById("conexao-aviso");
 
+const anexoBotaoEl = document.getElementById("anexo-botao");
+const anexoArquivoEl = document.getElementById("anexo-arquivo");
+const anexoPreviaEl = document.getElementById("anexo-previa");
+const anexoImagemEl = document.getElementById("anexo-imagem");
+const anexoRemoverEl = document.getElementById("anexo-remover");
+
+const entradaEl = document.getElementById("entrada");
+const entradaFormEl = document.getElementById("entrada-form");
+const entradaTelefoneEl = document.getElementById("entrada-telefone");
+const entradaErroEl = document.getElementById("entrada-erro");
+const entradaExemplosEl = document.getElementById("entrada-exemplos");
+const simuladorNumeroEl = document.getElementById("simulador-numero");
+const trocarNumeroEl = document.getElementById("trocar-numero");
+
+// Foto escolhida e ainda não enviada, já em data URL pra ir no corpo JSON.
+let anexoPendente = null;
+
 const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-function formatarData(valor) {
-  if (!valor) return "";
-  // Reformata a string em vez de usar Date: "2026-09-15" seria lido como
-  // UTC e, no fuso do Brasil, exibido como 14/09, um dia antes do que o
-  // cliente agendou.
-  const [ano, mes, dia] = String(valor).slice(0, 10).split("-");
-  return dia ? `${dia}/${mes}/${ano}` : String(valor);
-}
 
 async function pedirJson(url, opcoes) {
   const resposta = await fetch(url, opcoes);
+  if (resposta.status === 204) return null;
+
   const dados = await resposta.json().catch(() => ({}));
   if (!resposta.ok) {
-    throw new Error(dados.detail || "Não foi possível completar a operação.");
+    const erro = new Error(dados.detail || "Não foi possível completar a operação.");
+    // 401 aqui não é falha: é o servidor dizendo que não sabe de qual número
+    // veio a requisição. Quem chamou não deve mostrar bolha de erro, e sim
+    // devolver a pessoa pra tela de identificação.
+    erro.naoIdentificado = resposta.status === 401;
+    throw erro;
   }
   return dados;
 }
 
-// --- Chat -----------------------------------------------------------------
+// --- Identificação ----------------------------------------------------------
+
+const NUMEROS_DE_EXEMPLO = ["11 98888-1234", "21 97777-4321", "31 96666-8899"];
+
+let identificado = false;
+
+// Permite abrir a tela já como um número (`?telefone=11988881234`). Serve pro
+// print em headless, que não clica em nada, e pra alternar entre dois
+// clientes em abas diferentes sem passar pelo formulário.
+function numeroDaUrl() {
+  return new URLSearchParams(location.search).get("telefone");
+}
+
+function mostrarEntrada(mensagem) {
+  identificado = false;
+  entradaEl.hidden = false;
+  entradaErroEl.hidden = !mensagem;
+  entradaErroEl.textContent = mensagem || "";
+  simuladorNumeroEl.textContent = "ninguém ainda";
+  entradaTelefoneEl.focus();
+}
+
+function aoIdentificar(eu) {
+  identificado = true;
+  entradaEl.hidden = true;
+  entradaErroEl.hidden = true;
+  simuladorNumeroEl.textContent = eu.telefone_formatado;
+  document.title = `Lu · ${eu.telefone_formatado}`;
+}
+
+async function entrar(telefone) {
+  const eu = await pedirJson("/api/sessao", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telefone }),
+  });
+  aoIdentificar(eu);
+  await loadHistory();
+  agendarNotificacoes(0);
+  return eu;
+}
+
+entradaFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const telefone = entradaTelefoneEl.value.trim();
+  if (!telefone) return;
+  try {
+    await entrar(telefone);
+  } catch (err) {
+    entradaErroEl.textContent = err.message;
+    entradaErroEl.hidden = false;
+  }
+});
+
+NUMEROS_DE_EXEMPLO.forEach((numero) => {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "entrada-exemplo";
+  botao.textContent = numero;
+  botao.addEventListener("click", () => {
+    entradaTelefoneEl.value = numero;
+    entradaFormEl.requestSubmit();
+  });
+  entradaExemplosEl.appendChild(botao);
+});
+
+async function trocarDeNumero() {
+  clearTimeout(timerNotificacoes);
+  await fetch("/api/sessao", { method: "DELETE" });
+  messagesEl.innerHTML = "";
+  ultimaData = null;
+  ultimoAutor = null;
+  entradaTelefoneEl.value = "";
+  // Sem isto, recarregar depois de trocar voltaria pro número da URL.
+  history.replaceState(null, "", location.pathname);
+  fecharMenu();
+  fecharPaineis();
+  mostrarEntrada();
+}
+
+trocarNumeroEl.addEventListener("click", trocarDeNumero);
+menuTrocarEl.addEventListener("click", trocarDeNumero);
+
+// --- Menu do cabeçalho ------------------------------------------------------
+
+function fecharMenu() {
+  menuEl.hidden = true;
+  menuBotaoEl.setAttribute("aria-expanded", "false");
+}
+
+menuBotaoEl.addEventListener("click", (event) => {
+  event.stopPropagation();
+  menuEl.hidden = !menuEl.hidden;
+  menuBotaoEl.setAttribute("aria-expanded", String(!menuEl.hidden));
+});
+
+document.addEventListener("click", (event) => {
+  if (!menuEl.hidden && !menuEl.contains(event.target)) fecharMenu();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!menuEl.hidden) return fecharMenu();
+  fecharPaineis();
+});
+
+// --- Chat -------------------------------------------------------------------
 
 function anexarBolha(bolha, sempreRolar = true) {
   const acompanhar =
@@ -66,79 +194,74 @@ function marcarDia(rotulo) {
   messagesEl.appendChild(faixa);
 }
 
-// Converte só **negrito**, montando nós de texto. Markdown completo não vale
-// o risco nem o peso aqui, mas deixar os asteriscos crus na tela é sujeira.
-function comNegrito(conteudo) {
-  const fragmento = document.createDocumentFragment();
-  String(conteudo)
-    .split(/(\*\*[^*]+\*\*)/g)
-    .forEach((pedaco) => {
-      if (!pedaco) return;
-      if (pedaco.startsWith("**") && pedaco.endsWith("**") && pedaco.length > 4) {
-        const forte = document.createElement("strong");
-        forte.textContent = pedaco.slice(2, -2);
-        fragmento.appendChild(forte);
-      } else {
-        fragmento.appendChild(document.createTextNode(pedaco));
-      }
-    });
-  return fragmento;
-}
-
-function criarBalao(classe, conteudo, hora, comTique) {
+function criarBalao(classe, conteudo, hora, tique) {
   const bubble = document.createElement("div");
   bubble.className = `bubble ${classe}`;
 
   const texto = document.createElement("span");
-  texto.appendChild(comNegrito(conteudo));
+  texto.appendChild(comFormatacao(conteudo));
   bubble.appendChild(texto);
 
   if (hora) {
     const marca = document.createElement("span");
     marca.className = "hora";
     marca.append(document.createTextNode(hora));
-    if (comTique) {
-      const tique = document.createElement("span");
-      tique.className = "tique";
-      tique.textContent = "\u2713\u2713";
-      marca.appendChild(tique);
+    if (tique) {
+      const marcaTique = document.createElement("span");
+      marcaTique.className = tique === "lido" ? "tique lido" : "tique";
+      marcaTique.textContent = tique === "lido" ? "✓✓" : "✓";
+      marca.appendChild(marcaTique);
     }
     bubble.appendChild(marca);
   }
   return bubble;
 }
 
-// Avatar só na primeira mensagem de uma sequência da Lu: repetir a cada balão
-// polui e é o que apps de mensagem evitam.
+// Rabicho e folga só na primeira mensagem de uma sequência do mesmo autor.
+// Não há avatar por mensagem: no WhatsApp ele só aparece em grupo, e numa
+// conversa de duas pessoas a foto ao lado de cada balão entrega que a tela
+// não é o app de verdade.
 let ultimoAutor = null;
 
-function renderMessage(role, content, hora = agora()) {
+function renderMessage(role, content, hora = agora(), foto = null, tique = "lido") {
   if (role === "error") {
     anexarBolha(criarBalao("error", content));
     ultimoAutor = null;
-    return;
+    return null;
   }
 
   marcarDia("Hoje");
 
   const linha = document.createElement("div");
-  const daLu = role === "assistant";
+  const daLu = role !== "user";
   linha.className = `linha-mensagem ${daLu ? "da-lu" : "de-mim"}`;
-  if (ultimoAutor !== role) linha.classList.add("mostra-avatar");
+  if (ultimoAutor !== role) linha.classList.add("abre-sequencia");
   ultimoAutor = role;
 
-  const avatar = document.createElement("span");
-  avatar.className = "avatar avatar-pequeno";
-  avatar.setAttribute("aria-hidden", "true");
-  avatar.textContent = daLu ? "Lu" : "";
-  if (!daLu) avatar.style.visibility = "hidden";
-
-  linha.append(avatar, criarBalao(role, content, hora, !daLu));
+  const balao = criarBalao(daLu ? "assistant" : "user", content, hora, daLu ? null : tique);
+  if (foto) {
+    const img = document.createElement("img");
+    img.className = "bubble-foto";
+    img.src = foto;
+    img.alt = "Foto enviada por você";
+    balao.prepend(img);
+  }
+  linha.appendChild(balao);
   anexarBolha(linha);
+  return linha;
 }
 
 function renderError(text) {
   renderMessage("error", text);
+}
+
+// Um tique cinza quando a mensagem saiu, dois azuis quando a Lu respondeu (ou
+// seja, leu). É o sinal que o cliente olha no WhatsApp pra saber se chegou.
+function marcarComoLido(linha) {
+  const tique = linha && linha.querySelector(".tique");
+  if (!tique) return;
+  tique.textContent = "✓✓";
+  tique.classList.add("lido");
 }
 
 // Cartão do produto ao lado da fala da Lu. Foi o que resolveu a queixa de que
@@ -171,7 +294,7 @@ function renderCartoesProduto(produtos) {
 
     const meta = document.createElement("p");
     meta.className = "cartao-meta";
-    meta.textContent = `${produto.prazo_entrega_dias} dia(s) \u00b7 \u2b50 ${produto.avaliacao}`;
+    meta.textContent = `${produto.prazo_entrega_dias} dia(s) · ⭐ ${produto.avaliacao}`;
 
     texto.append(nome, preco, meta);
 
@@ -199,25 +322,22 @@ function ehNotificacao(mensagem) {
   return mensagem.tipo === "notificacao";
 }
 
+// No WhatsApp um aviso de pedido chega como mensagem, não como cartão
+// amarelo: o emoji é o único destaque que o canal real permitiria.
 function renderNotificacao(content) {
-  marcarDia("Hoje");
-  ultimoAutor = null;
-
-  const bubble = criarBalao("notificacao", content, agora());
-  const rotulo = document.createElement("span");
-  rotulo.className = "notificacao-rotulo";
-  rotulo.textContent = "Atualização do pedido";
-  bubble.prepend(rotulo);
-
-  // Chega sozinha, sem o usuário ter pedido: só puxa a rolagem se ele já
+  const linha = renderMessage("assistant", `📦 ${content}`);
+  // Chega sozinha, sem o cliente ter pedido: só puxa a rolagem se ele já
   // estiver no fim da conversa, pra não tirar da tela o que ele está lendo.
-  anexarBolha(bubble, false);
+  return linha;
 }
 
 function definirCarregando(carregando) {
-  digitandoEl.hidden = !carregando;
+  // "digitando..." vai pro cabeçalho, que é onde o WhatsApp mostra. Um balão
+  // de três pontinhos na conversa não existe lá.
+  perfilStatusEl.textContent = carregando ? "digitando..." : "online";
   inputEl.disabled = carregando;
   enviarEl.disabled = carregando;
+  anexoBotaoEl.disabled = carregando;
   if (carregando) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   } else {
@@ -225,19 +345,28 @@ function definirCarregando(carregando) {
   }
 }
 
-async function enviarMensagem(texto) {
-  renderMessage("user", texto);
+function tratarErro(err) {
+  if (err.naoIdentificado) {
+    mostrarEntrada("Sua sessão expirou. Informe o número de novo.");
+    return;
+  }
+  renderError(err.message);
+}
+
+async function enviarMensagem(texto, imagem = null) {
+  const minha = renderMessage("user", texto, agora(), imagem, "enviado");
   definirCarregando(true);
   try {
     const dados = await pedirJson("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: texto }),
+      body: JSON.stringify({ content: texto, imagem }),
     });
+    marcarComoLido(minha);
     renderMessage("assistant", dados.reply);
     renderCartoesProduto(dados.produtos);
   } catch (err) {
-    renderError(err.message);
+    tratarErro(err);
   } finally {
     definirCarregando(false);
   }
@@ -246,9 +375,53 @@ async function enviarMensagem(texto) {
 formEl.addEventListener("submit", (event) => {
   event.preventDefault();
   const content = inputEl.value.trim();
-  if (!content || inputEl.disabled) return;
+  // Com foto anexada dá pra enviar sem escrever nada: a pergunta implícita
+  // é sempre a mesma, se a loja tem aquilo.
+  if ((!content && !anexoPendente) || inputEl.disabled) return;
+
+  const foto = anexoPendente;
+  const texto = content || (foto ? "Vocês têm esse produto?" : "");
   inputEl.value = "";
-  enviarMensagem(content);
+  limparAnexo();
+  enviarMensagem(texto, foto);
+});
+
+// --- Foto do produto --------------------------------------------------------
+
+function limparAnexo() {
+  anexoPendente = null;
+  anexoArquivoEl.value = "";
+  anexoPreviaEl.hidden = true;
+  anexoImagemEl.removeAttribute("src");
+}
+
+anexoBotaoEl.addEventListener("click", () => anexoArquivoEl.click());
+anexoRemoverEl.addEventListener("click", limparAnexo);
+
+anexoArquivoEl.addEventListener("change", () => {
+  const arquivo = anexoArquivoEl.files && anexoArquivoEl.files[0];
+  if (!arquivo) return;
+
+  // O mesmo teto do servidor, conferido aqui pra não subir 20MB e só então
+  // descobrir que foi recusado.
+  if (arquivo.size > 8 * 1024 * 1024) {
+    renderError("A foto passa de 8MB. Mande uma menor.");
+    limparAnexo();
+    return;
+  }
+
+  const leitor = new FileReader();
+  leitor.onload = () => {
+    anexoPendente = leitor.result;
+    anexoImagemEl.src = anexoPendente;
+    anexoPreviaEl.hidden = false;
+    inputEl.focus();
+  };
+  leitor.onerror = () => {
+    renderError("Não consegui ler essa foto.");
+    limparAnexo();
+  };
+  leitor.readAsDataURL(arquivo);
 });
 
 async function loadHistory() {
@@ -268,28 +441,40 @@ async function loadHistory() {
       }
     });
   } catch (err) {
+    if (err.naoIdentificado) return mostrarEntrada();
     renderError("Não foi possível carregar o histórico.");
   }
 }
 
-// --- Painéis ---------------------------------------------------------------
+// --- Painéis ----------------------------------------------------------------
+
+function fecharPaineis() {
+  [catalogoPanelEl, pedidosPanelEl].forEach((p) => p.classList.add("hidden"));
+  [catalogoToggleEl, pedidosToggleEl].forEach((b) =>
+    b.setAttribute("aria-expanded", "false")
+  );
+  history.replaceState(null, "", location.pathname + location.search);
+}
 
 function alternarPainel(painel, botao) {
   const abrindo = painel.classList.contains("hidden");
-  [catalogoPanelEl, pedidosPanelEl].forEach((p) => p.classList.add("hidden"));
-  [catalogoToggleEl, pedidosToggleEl].forEach((b) => {
-    b.classList.remove("ativa");
-    b.setAttribute("aria-expanded", "false");
-  });
+  fecharPaineis();
+  fecharMenu();
   if (abrindo) {
     painel.classList.remove("hidden");
-    botao.classList.add("ativa");
     botao.setAttribute("aria-expanded", "true");
+    history.replaceState(
+      null,
+      "",
+      `${location.pathname}${location.search}#${painel.id.replace("-panel", "")}`
+    );
   }
-  const hash = abrindo ? `#${painel.id.replace("-panel", "")}` : "";
-  history.replaceState(null, "", hash || location.pathname);
   return abrindo;
 }
+
+document.querySelectorAll(".painel-fechar").forEach((botao) => {
+  botao.addEventListener("click", fecharPaineis);
+});
 
 function criarLinha(texto, className) {
   const p = document.createElement("p");
@@ -333,7 +518,7 @@ function criarCardProduto(produto) {
 
   const meta = document.createElement("p");
   meta.className = "produto-meta";
-  meta.textContent = `${produto.prazo_entrega_dias} dia(s) \u00b7 \u2b50 ${produto.avaliacao}`;
+  meta.textContent = `${produto.prazo_entrega_dias} dia(s) · ⭐ ${produto.avaliacao}`;
 
   const estoque = document.createElement("p");
   estoque.className = produto.estoque > 0 ? "produto-meta" : "produto-meta produto-esgotado";
@@ -346,7 +531,7 @@ function criarCardProduto(produto) {
   const pedir = criarBotao(
     "Pedir",
     () => {
-      alternarPainel(catalogoPanelEl, catalogoToggleEl);
+      fecharPaineis();
       enviarMensagem(`Quero comprar o ${produto.nome} (id ${produto.id}).`);
     },
     "botao-primario"
@@ -355,7 +540,7 @@ function criarCardProduto(produto) {
   acoes.append(
     pedir,
     criarBotao("Saber mais", () => {
-      alternarPainel(catalogoPanelEl, catalogoToggleEl);
+      fecharPaineis();
       enviarMensagem(
         `Me explica o que devo olhar antes de escolher um ${produto.categoria.replace(/-/g, " ")}.`
       );
@@ -413,7 +598,7 @@ categoriaEl.addEventListener("change", loadCatalogo);
 
 compararEl.addEventListener("click", () => {
   const categoria = categoriaEl.value.replace(/-/g, " ");
-  alternarPainel(catalogoPanelEl, catalogoToggleEl);
+  fecharPaineis();
   enviarMensagem(`Compara as opções de ${categoria} pra mim.`);
 });
 
@@ -675,7 +860,7 @@ let falhasSeguidas = 0;
 // nada se perde enquanto ninguém olha, e a volta pra aba busca o estado atual.
 function agendarNotificacoes(atraso = intervaloNotificacoes) {
   clearTimeout(timerNotificacoes);
-  if (document.hidden) return;
+  if (document.hidden || !identificado) return;
   timerNotificacoes = setTimeout(verificarNotificacoes, atraso);
 }
 
@@ -700,6 +885,10 @@ async function verificarNotificacoes() {
       if (!pedidosPanelEl.classList.contains("hidden")) loadPedidos();
     }
   } catch (err) {
+    if (err.naoIdentificado) {
+      mostrarEntrada();
+      return;
+    }
     // Consulta de fundo: um aviso fixo e discreto, nunca uma bolha de erro a
     // cada tentativa. O intervalo dobra até o teto pra não martelar a API.
     falhasSeguidas += 1;
@@ -732,7 +921,21 @@ function abrirPainelDaUrl() {
   }
 }
 
-// Só depois do histórico na tela: notificação renderizada antes seria
-// desenhada de novo quando o histórico chegasse.
-loadHistory().then(() => agendarNotificacoes());
-abrirPainelDaUrl();
+async function iniciar() {
+  const daUrl = numeroDaUrl();
+  try {
+    if (daUrl) {
+      await entrar(daUrl);
+    } else {
+      aoIdentificar(await pedirJson("/api/sessao"));
+      await loadHistory();
+      agendarNotificacoes(0);
+    }
+  } catch (err) {
+    mostrarEntrada(daUrl ? err.message : "");
+    return;
+  }
+  abrirPainelDaUrl();
+}
+
+iniciar();

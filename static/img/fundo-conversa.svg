@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trama de rabiscos do fundo da conversa, no espírito do papel de parede do
+  WhatsApp. É um ladrilho: o CSS repete, então nenhum desenho encosta na
+  borda, senão o corte apareceria como emenda.
+
+  A opacidade está embutida aqui, e não no CSS, porque o cinza escolhido
+  funciona nos dois temas: sobre o bege claro ele some no fundo, sobre o
+  quase-preto ele vira um brilho fraco. Um arquivo, dois temas.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
+  <g fill="none" stroke="#8696a0" stroke-width="1.7" stroke-linecap="round"
+     stroke-linejoin="round" opacity="0.075">
+
+    <!-- balão de conversa -->
+    <path d="M24 30h34a5 5 0 015 5v18a5 5 0 01-5 5H40l-9 8v-8h-7a5 5 0 01-5-5V35a5 5 0 015-5z"/>
+
+    <!-- coração -->
+    <path d="M112 46c-4-9-18-7-18 3 0 8 11 14 18 20 7-6 18-12 18-20 0-10-14-12-18-3z"/>
+
+    <!-- xícara -->
+    <path d="M186 34h26v16a10 10 0 01-10 10h-6a10 10 0 01-10-10z"/>
+    <path d="M212 39h6a5 5 0 010 10h-6"/>
+    <path d="M190 24v-6M198 26v-8M206 24v-6"/>
+
+    <!-- estrela -->
+    <path d="M252 32l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z"/>
+
+    <!-- câmera -->
+    <path d="M30 108h10l4-6h14l4 6h10a4 4 0 014 4v22a4 4 0 01-4 4H30a4 4 0 01-4-4v-22a4 4 0 014-4z"/>
+    <circle cx="51" cy="123" r="8"/>
+
+    <!-- nota musical -->
+    <path d="M118 136V104l22-5v32"/>
+    <ellipse cx="112" cy="136" rx="7" ry="5.5"/>
+    <ellipse cx="134" cy="131" rx="7" ry="5.5"/>
+
+    <!-- avião de papel -->
+    <path d="M182 128l40-18-14 40-9-14z"/>
+    <path d="M199 136l23-26"/>
+
+    <!-- lâmpada -->
+    <path d="M256 100a13 13 0 00-8 23v6h16v-6a13 13 0 00-8-23z"/>
+    <path d="M250 136h12"/>
+
+    <!-- carrinho -->
+    <path d="M24 186h8l7 24h28l7-18H36"/>
+    <circle cx="44" cy="218" r="4"/>
+    <circle cx="63" cy="218" r="4"/>
+
+    <!-- rosto sorridente -->
+    <circle cx="124" cy="200" r="19"/>
+    <path d="M116 194v3M132 194v3M115 207a12 12 0 0018 0"/>
+
+    <!-- presente -->
+    <path d="M186 194h34v26h-34zM186 194l-2-8h38l-2 8M203 194v26"/>
+    <path d="M203 186c-6-10-16-4-10 2 2 2 6 0 10-2zM203 186c6-10 16-4 10 2-2 2-6 0-10-2z"/>
+
+    <!-- relógio -->
+    <circle cx="253" cy="203" r="17"/>
+    <path d="M253 193v11l7 4"/>
+
+    <!-- polegar pra cima -->
+    <path d="M32 268v-18h6l8-12c2-3 7-2 6 2l-2 8h12a4 4 0 014 5l-4 13a5 5 0 01-5 4H38a6 6 0 01-6-2z"/>
+
+    <!-- guarda-chuva -->
+    <path d="M104 262a22 22 0 0144 0z"/>
+    <path d="M126 262v14a5 5 0 01-10 0"/>
+
+    <!-- livro -->
+    <path d="M190 244h16a6 6 0 016 6v22a6 6 0 00-6-6h-16zM222 244h-16v22h16a6 6 0 016 6v-22a6 6 0 00-6-6z"/>
+
+    <!-- sol -->
+    <circle cx="252" cy="258" r="10"/>
+    <path d="M252 240v-6M252 282v-6M270 258h6M228 258h6M264 246l4-4M236 274l4-4M264 270l4 4M236 242l4 4"/>
+  </g>
+</svg>

@@ -1,5 +1,30 @@
-# Não validado: a máquina onde isto foi escrito não tem Docker.
+# Não validado: a máquina onde isto foi escrito não tem Docker no PATH.
 services:
+  banco:
+    # Imagem oficial do pgvector, que é o Postgres com a extensão já
+    # compilada. Usar `postgres:17` puro obrigaria a compilar o pgvector
+    # dentro do container, que foi exatamente o trabalho manual que a
+    # instalação local exigiu.
+    image: pgvector/pgvector:pg17
+    # Sem `ports:` de propósito. O banco só precisa ser alcançado pela app,
+    # que está na mesma rede do compose e o encontra pelo nome `banco`.
+    # Publicar 5432 no host colidiria com o container de trabalho que já usa
+    # essa porta nesta máquina.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-cerebro_lu}
+    volumes:
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      # A app roda `init_db` no boot, então subir antes do banco aceitar
+      # conexão derruba o container em vez de esperar.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lu} -d ${POSTGRES_DB:-cerebro_lu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   lu:
     build: .
     ports:
@@ -8,11 +33,16 @@ services:
       # Sem a chave o app sobe mas o chat responde 502 na primeira mensagem.
       GROQ_API_KEY: ${GROQ_API_KEY:?defina GROQ_API_KEY no .env}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lu}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB:-cerebro_lu}
       # 20 deixa o pedido andar em cerca de um minuto, bom pra demonstrar.
       # Use 86400 pra tempo real.
       SEGUNDOS_POR_DIA_ENTREGA: ${SEGUNDOS_POR_DIA_ENTREGA:-20}
-    volumes:
-      - dados:/dados
+      # O simulador fica de fora do que sobe. Ligar aqui não basta pra
+      # trazê-lo de volta: a imagem não copia `static/`.
+      SIMULADOR: "0"
+    depends_on:
+      banco:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

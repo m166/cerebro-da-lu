@@ -10,6 +10,33 @@ def test_toda_tool_declarada_tem_implementacao():
     assert declaradas == set(tools.DISPATCH)
 
 
+# Ferramenta que pode ficar sem caso positivo de avaliação, com o motivo.
+# A lista existe pra que a exceção seja consciente e escrita, não silenciosa.
+SEM_CASO_POSITIVO = {
+    # Só deve disparar depois de o cliente sumir por horas, e o harness da
+    # avaliação manda uma mensagem sem histórico: nenhuma frase expressa
+    # "sumiu ontem". Coberta por caso negativo em FERRAMENTAS_PROIBIDAS e
+    # pelos 24 casos de tests/test_cupom.py, que controlam o relógio.
+    "oferecer_cupom",
+}
+
+
+def test_toda_tool_tem_caso_de_avaliacao():
+    """Ferramenta no manual do modelo sem régua nenhuma é como as três que
+    entraram sem medição e deixaram o invariante virar ficção.
+
+    Não chama a Groq: só compara os nomes declarados com os casos escritos.
+    """
+    from evals import casos
+
+    declaradas = {schema["function"]["name"] for schema in tools.TOOL_SCHEMAS}
+    sem_caso = casos.ferramentas_sem_caso(declaradas) - SEM_CASO_POSITIVO
+    assert not sem_caso, (
+        f"sem caso em evals/casos.py: {sorted(sem_caso)}. Escreva o caso ou "
+        f"declare a exceção com motivo em SEM_CASO_POSITIVO."
+    )
+
+
 def test_busca_limita_resultados_pro_modelo():
     """Mandar 100+ produtos pro modelo estouraria o contexto sem necessidade."""
     resultado = tools.executar("buscar_produtos", {})

@@ -2,11 +2,18 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app import exceptions, schemas, services
+from app.routers.identificacao import exigir_identificacao
 
-router = APIRouter(prefix="/api/pedidos", tags=["pedidos"])
+# Pedido é do cliente, não da loja: sem saber de qual número veio a
+# requisição não há o que listar nem em nome de quem comprar.
+router = APIRouter(
+    prefix="/api/pedidos",
+    tags=["pedidos"],
+    dependencies=[Depends(exigir_identificacao)],
+)
 
 
 @router.get("", response_model=List[schemas.PedidoOut])

@@ -150,12 +150,28 @@ def test_indice_e_reaproveitado_entre_buscas():
     assert chamadas[1:] == [1, 1]
 
 
-def test_definir_encoder_invalida_indice():
-    vectorstore.buscar("aquece", k=1)
-    assert vectorstore._indice is not None
+def test_definir_encoder_reindexa_o_corpus():
+    """Trocar o encoder obriga a refazer os vetores guardados.
 
-    vectorstore.definir_encoder(None)
-    assert vectorstore._indice is None
+    A impressão do texto continua a mesma depois da troca, então nada no
+    conteúdo denuncia que o índice ficou velho. Sem reindexar, a busca
+    compararia a pergunta encodada por um modelo com documentos encodados
+    por outro, o que devolve vizinho aleatório sem erro nenhum.
+    """
+    from tests.conftest import _encoder_falso
+
+    vectorstore.buscar("aquece", k=1)
+
+    chamadas = []
+
+    def encoder_contador(textos):
+        chamadas.append(len(textos))
+        return _encoder_falso(textos)
+
+    vectorstore.definir_encoder(encoder_contador)
+    vectorstore.buscar("depois da troca", k=1)
+
+    assert chamadas[0] == len(conhecimento.DOCUMENTOS)
 
 
 # --- Service ---------------------------------------------------------------

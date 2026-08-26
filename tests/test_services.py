@@ -31,7 +31,7 @@ def test_listar_categorias():
 
 def test_sugerir_melhor_preco():
     resultado = services.sugerir_produto(categoria="notebooks", criterio="melhor_preco")
-    assert resultado["produto"]["nome"] == "Notebook Essencial 14"
+    assert resultado["produto"]["nome"] == "Notebook Chromebook 11"
 
 
 def test_sugerir_melhor_prazo():
@@ -45,21 +45,22 @@ def test_sugerir_melhor_avaliacao():
 
 
 def test_custo_beneficio_pesa_avaliacao_e_prazo_alem_do_preco():
-    """Em celulares o mais barato é o Basic Go (3.7 estrelas, 7 dias), mas o
-    custo-benefício prefere o Nova 5G, melhor avaliado e entrega em 2 dias."""
+    """Em celulares o mais barato é o de teclas grandes (4.0 estrelas, 6 dias),
+    mas o custo-benefício prefere o Nova 5G, melhor avaliado e com entrega em
+    2 dias. É o que separa os dois critérios."""
     barato = services.sugerir_produto(categoria="celulares", criterio="melhor_preco")
     equilibrado = services.sugerir_produto(categoria="celulares", criterio="melhor_custo_beneficio")
-    assert barato["produto"]["nome"] == "Smartphone Basic Go"
+    assert barato["produto"]["nome"] == "Smartphone Sênior Teclas Grandes"
     assert equilibrado["produto"]["nome"] == "Smartphone Nova 5G"
 
 
 def test_custo_beneficio_pode_coincidir_com_o_mais_barato():
-    """Ser o mais barato não desqualifica: nos notebooks o Essencial 14 ganha
-    nos dois critérios, porque a diferença de preço pros outros é grande e a
-    avaliação dele não é ruim."""
+    """Ser o mais barato não desqualifica: nos notebooks o Chromebook ganha
+    nos dois critérios, porque a diferença de preço pros outros é grande o
+    bastante pra compensar a avaliação mais baixa."""
     barato = services.sugerir_produto(categoria="notebooks", criterio="melhor_preco")
     equilibrado = services.sugerir_produto(categoria="notebooks", criterio="melhor_custo_beneficio")
-    assert barato["produto"]["nome"] == equilibrado["produto"]["nome"] == "Notebook Essencial 14"
+    assert barato["produto"]["nome"] == equilibrado["produto"]["nome"] == "Notebook Chromebook 11"
 
 
 def test_custo_beneficio_e_o_criterio_padrao():
@@ -77,8 +78,10 @@ def test_sugerir_categoria_inexistente_levanta():
 
 def test_comparar_por_categoria():
     resultado = services.comparar_produtos(categoria="celulares")
-    assert len(resultado["produtos"]) == 6
-    assert resultado["melhor_preco"] == "Smartphone Basic Go"
+    assert len(resultado["produtos"]) == len(
+        services.buscar_produtos(categoria="celulares")
+    )
+    assert resultado["melhor_preco"] == "Smartphone Sênior Teclas Grandes"
     assert resultado["melhor_avaliacao"] == "Smartphone Galaxy Vision Ultra"
     assert resultado["melhor_prazo"] == "Smartphone Nova 5G"
 
@@ -532,7 +535,10 @@ def test_notificacao_cita_codigo_so_quando_ha_o_que_rastrear():
 
 
 def test_toda_etapa_tem_texto_de_notificacao():
-    assert set(models.MENSAGENS_NOTIFICACAO) == set(models.ETAPAS_RASTREIO)
+    # O texto virou template da Cloud API quando o canal entrou em cena. As
+    # regras de template estão em `test_whatsapp.py`; aqui só interessa que
+    # nenhuma etapa ficou sem mensagem.
+    assert set(models.TEMPLATES_NOTIFICACAO) == set(models.ETAPAS_RASTREIO)
 
 
 def test_entrega_agendada_nao_e_mais_status():

@@ -2,4 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
-cerebro.db
+# O asterisco cobre backup (cerebro.db.antes-de-x) e os arquivos que o
+# SQLite cria ao lado (-wal, -shm). Sem ele, só o nome exato era ignorado e
+# um banco com conversa de cliente escapava pro git pelo sufixo.
+cerebro.db*

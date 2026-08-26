@@ -110,6 +110,57 @@ FERRAMENTAS = [
     ("quero receber o pedido 1 no dia 2026-09-10", {"agendar_entrega"}),
 ]
 
+# A lista acima é **linha de base histórica e está congelada**. Ela é o que
+# sustenta o número registrado como invariante no MELHORIAS.md, e cada caso
+# é uma chamada independente ao modelo (persona + schemas + uma mensagem),
+# sem estado entre eles. Por isso acrescentar caso numa lista nova não muda
+# em nada o resultado desses 18, e por isso mexer num destes mata a
+# comparação com toda medição anterior. Caso novo vai nas listas abaixo.
+
+# Ferramentas que entraram depois da última medição e nunca passaram pela
+# régua. Vocabulário de cliente de propósito, sem repetir o verbo da
+# descrição da ferramenta ("anota aí", "salva meu dado", "registra minha
+# satisfação"): copiar a descrição infla a métrica do mesmo jeito que usar o
+# título do documento inflava o retrieval.
+FERRAMENTAS_COBERTURA = [
+    ("pode me chamar de Rafael, e agora moro na Rua Verbo Divino 200", {"salvar_dado_do_cliente"}),
+    ("meu limite mesmo e 2 mil, mais que isso nao da", {"anotar_da_conversa"}),
+    ("nota 5 pra vc, me ajudou demais hoje", {"registrar_satisfacao"}),
+]
+
+# Ferramenta que NÃO pode ser chamada nestas situações.
+#
+# `oferecer_cupom` entra aqui como caso negativo, e não como caso positivo,
+# porque o harness manda uma mensagem sem histórico: nenhuma frase consegue
+# expressar "sumiu há oito horas depois de olhar um produto", que é a única
+# condição em que a ferramenta deveria disparar. Um caso positivo mediria a
+# disposição do modelo de chamar algo que `services.oferecer_cupom` vai
+# recusar, ou seja, exatamente o comportamento que não queremos.
+#
+# A cobertura positiva dela existe onde deve, em `tests/test_cupom.py`, que
+# controla o relógio. Aqui o que vale medir é o inverso: pedir desconto não
+# pode fazer a Lu sacar a ferramenta.
+FERRAMENTAS_PROIBIDAS = [
+    ("faz um desconto ai pra mim? ta caro esse preco", {"oferecer_cupom"}),
+    ("vou pensar melhor e depois eu volto", {"oferecer_cupom"}),
+]
+
+
+def ferramentas_sem_caso(declaradas) -> set:
+    """Ferramentas expostas ao modelo que nenhum caso de avaliação cobre.
+
+    Existe pra que o descompasso apareça sozinho. Foi assim que três
+    ferramentas entraram no manual sem régua nenhuma: nada apontava a
+    diferença entre o que o modelo enxerga e o que a avaliação mede.
+    """
+    cobertas = set()
+    for _, aceitaveis in list(FERRAMENTAS) + list(FERRAMENTAS_COBERTURA):
+        cobertas |= aceitaveis
+    for _, proibidas in FERRAMENTAS_PROIBIDAS:
+        cobertas |= proibidas
+    return set(declaradas) - cobertas
+
+
 # Mensagens que NÃO deveriam disparar ferramenta: são conversa, não
 # consulta. Chamar ferramenta aqui é desperdício de tempo e token.
 FERRAMENTAS_SEM_CHAMADA = [
